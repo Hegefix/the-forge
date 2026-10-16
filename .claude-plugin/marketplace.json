@@ -1,0 +1,15 @@
+{
+  "name": "hegefix",
+  "description": "Claude Code plugins by Viktor Krasnohorskiy.",
+  "owner": {
+    "name": "Viktor Krasnohorskiy"
+  },
+  "plugins": [
+    {
+      "name": "the-forge",
+      "source": "./plugins/the-forge",
+      "description": "Workflow for parallel Claude Code sessions: one lead session hands tasks to worker sessions, each in its own worktree and tmux session. Skills coordinate-workers (the lead) and work-for-coordinator (each worker), a launch script, workspace templates, permission profiles, optional helper templates (comms watcher, MR watch, janitor, load check, e2e runner, tracker helper, and a scribe for teams with an LLM wiki), and an optional module-boundary lint example.",
+      "category": "the-forge"
+    }
+  ]
+}

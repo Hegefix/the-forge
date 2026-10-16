@@ -1,0 +1,11 @@
+{
+  "$schema": "https://anthropic.com/claude-code/plugin.schema.json",
+  "name": "the-forge",
+  "displayName": "The Forge",
+  "version": "0.1.0",
+  "description": "Workflow for parallel Claude Code sessions: one lead session hands tasks to worker sessions, each in its own worktree and tmux session. Skills coordinate-workers (the lead) and work-for-coordinator (each worker), a launch script, workspace templates, permission profiles, optional helper templates (comms watcher, MR watch, janitor, load check, e2e runner, tracker helper, and a scribe for teams with an LLM wiki), and an optional module-boundary lint example.",
+  "author": {
+    "name": "Viktor Krasnohorskiy"
+  },
+  "repository": "https://github.com/Hegefix/the-forge"
+}

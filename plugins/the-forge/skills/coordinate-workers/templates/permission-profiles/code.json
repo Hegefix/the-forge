@@ -1,0 +1,42 @@
+{
+  "permissions": {
+    "deny": [
+      "mcp__<chat-server>",
+      "mcp__<mail-server>",
+      "mcp__<browser-server>",
+      "mcp__<tracker-server>__create*",
+      "mcp__<tracker-server>__update*",
+      "mcp__<tracker-server>__edit*",
+      "mcp__<tracker-server>__add*",
+      "mcp__<tracker-server>__transition*",
+      "mcp__<tracker-server>__delete*",
+      "Bash(gh pr merge:*)",
+      "Bash(glab mr merge:*)",
+      "Bash(gh pr review:*)",
+      "Bash(glab mr approve:*)",
+      "Bash(gh pr close:*)",
+      "Bash(glab mr close:*)",
+      "Bash(gh pr comment:*)",
+      "Bash(glab mr note:*)",
+      "Bash(gh issue create:*)",
+      "Bash(gh issue comment:*)",
+      "Bash(glab issue create:*)",
+      "Bash(glab issue note:*)",
+      "Bash(gh release:*)",
+      "Bash(glab release:*)",
+      "Bash(gh workflow run:*)",
+      "Bash(glab ci run:*)",
+      "Bash(git push --force*)",
+      "Bash(git push * --force*)",
+      "Bash(git push -f*)",
+      "Bash(git push * -f*)",
+      "Bash(git push * main)",
+      "Bash(git push * main *)",
+      "Bash(git push *:main)",
+      "Bash(git push *:main *)",
+      "Bash(xcrun simctl boot:*)",
+      "Bash(emulator:*)",
+      "Bash(<device-test-runner>:*)"
+    ]
+  }
+}

@@ -1,0 +1,2 @@
+# Extra MRs for mr-watch to follow, one per line: group/project!iid
+# Your own open MRs are found on their own; list here only the ones of others that you follow.

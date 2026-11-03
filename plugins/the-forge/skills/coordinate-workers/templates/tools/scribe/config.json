@@ -1,0 +1,30 @@
+{
+  "model": "sonnet",
+  "interval_min": 20,
+  "timeout_s": 600,
+  "max_usd": 3,
+  "max_log_lines": 80,
+  "push_timeout_s": 180,
+  "timezone": "",
+  "decision_log": "coordination/decision-log.md",
+  "evidence_dir": ".evidence",
+  "notes": {
+    "kind": "files",
+    "dir": "coordination/notes",
+    "handover": "coordination/handover.md",
+    "dashboard": "",
+    "app_flows": "",
+    "repo": "",
+    "server": "",
+    "read_tools": [],
+    "write_tools": [],
+    "never_tools": [],
+    "folders": [],
+    "rules_file": ""
+  },
+  "branch_shas": {},
+  "context_logs": ["coordination/tools/comms-watch/state/log.md", "coordination/tools/mr-watch/events.log",
+                   "coordination/tools/janitor/state/report.log"],
+  "tracker": {"server": "", "tools": []},
+  "deny_servers": []
+}

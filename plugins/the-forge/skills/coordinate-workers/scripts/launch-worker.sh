@@ -22,6 +22,8 @@
 #   --profile          permission profile, passed to `claude --settings`: a name such as `code`
 #                      (<workspace>/coordination/permission-profiles/<name>.json) or a path to a
 #                      JSON file. Refused if missing, not valid JSON or still holding a <placeholder>.
+#                      A profile file named browser.json also adds `claude --chrome`, because the
+#                      browser tools load only with it.
 #   --reuse-worktree   start the worker in an existing worktree at the target path
 #   --no-window        don't open a Terminal window; print the attach command instead
 #   --dry-run          check everything, print what would run, change nothing
@@ -151,6 +153,8 @@ fi
 claude_args=("$claude_bin")
 [[ -n "$mode" ]] && claude_args+=(--permission-mode "$mode")
 [[ -n "$profile" ]] && claude_args+=(--settings "$profile_file")
+# The browser profile is the only one that leaves the browser tools in, and they need --chrome to load.
+[[ "$(basename "${profile_file:-}")" == browser.json ]] && claude_args+=(--chrome)
 claude_args+=(--name "$name")
 # The shell inside tmux reads the brief, so its text is never re-parsed as shell syntax.
 tmux_cmd="$(printf '%q ' "${claude_args[@]}")\"\$(cat $(printf '%q' "$brief"))\""

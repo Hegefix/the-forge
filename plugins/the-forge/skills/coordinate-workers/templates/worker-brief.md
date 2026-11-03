@@ -13,7 +13,7 @@ Acceptance criteria (user-facing) and technical requirements: <list | see the ti
 
 Repo `<repo>`, worktree `<path>`, branch `<branch>` from `<base>`. It is already created: work only there.
 
-Permission profile: `<research | code | device | none>`. A missing or denied tool is a permission block: report `BLOCKED by permission`, don't work around it.
+Permission profile: `<research | code | device | browser | none>`. A missing or denied tool is a permission block: report `BLOCKED by permission`, don't work around it.
 
 ## Shared context
 

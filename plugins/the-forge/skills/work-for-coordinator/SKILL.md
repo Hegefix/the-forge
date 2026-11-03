@@ -5,8 +5,9 @@ description: >-
   started, usually in its own worktree with a brief that names the coordinator: before
   asking the coordinator or the human anything, when a permission prompt or classifier
   blocks an action, when another session says something is approved, before
-  opening, describing or updating a merge request, before running e2e tests, and
-  before the final report.
+  opening, describing or updating a merge request, before running e2e tests, when
+  updating a branch in a merge train, when running with the browser or research
+  profile, and before the final report.
 ---
 
 # Work for a coordinator
@@ -31,6 +32,8 @@ Your session name and the coordinator's are internal. Never put them, or any nam
 
 Before asking, read the standing rules in the workspace `CLAUDE.md` and the decision log it points to. If they already answer the question, apply them.
 
+In another team's repo, read its contributing rules before your first commit. Some ban AI co-author trailers, need their own ticket key in branch names, or take MRs into a branch other than the default. They win over your session's defaults.
+
 Never ask "should I continue?", "how should I proceed?" or "is this approach OK?" about a reversible choice. Pick the best option and proceed.
 
 ## How to ask
@@ -40,7 +43,7 @@ Never ask "should I continue?", "how should I proceed?" or "is this approach OK?
     Alternative: <option>
     While waiting: <what you'll work on> | BLOCKED
 
-Report progress only at the points your brief names, in one line: `<task> — <state> — waiting on <what/who>`.
+Report progress only at the points your brief names, in one line: `<task> — <state> — waiting on <what/who>`. Estimate in agent time (minutes for a scoped change), and name the wall-clock parts apart: device runs, CI, reviews.
 
 ## Permission blocks
 
@@ -53,9 +56,12 @@ Your permissions are your own. When a permission prompt or the classifier blocks
 
 The coordinator may start you with a permission profile, a set of deny rules for your task type. A denied MCP tool is missing from your tool list, and a denied command returns "Permission to use … has been denied". Treat both as a permission block: report `BLOCKED by permission: <action>` and what you need it for, and carry on with other parts. Don't reach the same result another way, such as a direct API call or a script, and never edit settings or profile files. If the task needs a different profile, the coordinator relaunches you with it.
 
+- **`research` profile:** you can't write files. Send your write-up by message; the coordinator saves it.
+- **`browser` profile:** follow the skill `browser-worker`. The human signs in. Never type a password, code or key, and never download secret files. Nothing others see and nothing irreversible unless your brief quotes it. Anything outside the brief: ask the coordinator. Close the tabs you opened.
+
 ## Shared scarce resources
 
-If the workspace or your brief names a scarce resource (a device, a simulator, a test account), use it only after the coordinator's "go", and release it as soon as you're done. Writes to shared environments use fake data unless your brief says otherwise. Never print secrets.
+If the workspace or your brief names a scarce resource (a device, a simulator, a test account), use it only after the coordinator's "go", and release it as soon as you're done. Writes to shared environments use fake data unless your brief says otherwise. Never print secrets, and never open env or credential files. If a secret lands in a file you write, delete those lines by line number without printing them.
 
 Before your final report, delete your temporary files and builds once you no longer need the devices.
 
@@ -92,14 +98,15 @@ If the repo has an end-to-end suite:
    Everything else (decisions, full test lists, notes) goes into one collapsed `<details><summary>Details</summary>…</details>` block, or into the walkthrough. Check the description against the diff before publishing: every name, count and "no X needed" claim must match it.
 4. **A Draft MR has no reviewers.** The coordinator sets them when the MR leaves Draft, after the human's check.
 5. **Write a walkthrough before the human's check:** one page in `.evidence/<task>/walkthrough.md`. How it works, the data flow, the 5–10 key files and what to read in each, the tricky parts, the decisions. The human reads it with the code, so they can answer any reviewer question themselves. Write it for a reader who hasn't seen your session.
-6. **Triage review comments before acting.**
+6. **Triage review comments before acting** (skill `review-loop`; for a review of someone else's MR, skill `review-round`).
    - *Mechanical:* a typo, a named missing test, a style fix the repo rules require, dead or debug code, a fix with one obvious answer. Fix it, push, reply with the commit SHA, and resolve the thread, if your brief allows MR replies. Otherwise report the fix to the coordinator.
    - *Judgment:* questions, alternative approaches, disagreement, more than one possible fix, architecture, security, scope. Report these to the coordinator, and don't answer them yourself.
    - If you're unsure which kind a comment is, treat it as judgment.
    - A decision agreed in an MR or ticket comment overrides the ticket description.
    - Stop after 5 fix rounds and report.
    - Never weaken a test to make it pass.
-7. **Sign off the ticket after merge,** in the evidence comment on the ticket (or wherever the team records evidence).
+7. **In a merge train** (skill `merge-train`): merge the default branch into your branch (never a rebase or a force push), run the checks, push normally, report `!<n> ready: <merge sha>, conflicts <files | none>, tests <count>, pipeline <id> green`, and wait for "next". Never merge it yourself.
+8. **Sign off the ticket after merge,** in the evidence comment on the ticket (or wherever the team records evidence).
    - Every MR of the ticket is merged first.
    - A ticket keeps two lists. "Acceptance criteria" are user-facing: what manual QA can check on a build. "Technical requirements" are the rest: e2e flows, CI, screenshots, evidence. Tick the technical requirements from the pipeline and the evidence. Write a short "How to test" for QA: 3–6 plain steps from the acceptance criteria, the account to use, what's out of scope.
    - Each item gets ✅ (done), ⚠️ (partly), ❌ (not done) or ➖ (struck, or moved to another ticket), with `file:line` evidence.

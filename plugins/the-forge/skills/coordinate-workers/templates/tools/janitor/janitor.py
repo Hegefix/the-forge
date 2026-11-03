@@ -4,12 +4,13 @@
 Rules:
 1. A worktree whose branch belongs to one of your MRs that is merged or closed, with no open MR left for
    that branch: remove the worktree and its local branch, if the worktree has no uncommitted changes and
-   no unpushed commits. A merged MR's remote branch is deleted too (closed MRs keep theirs).
+   its HEAD is that MR's head commit. A merged MR's remote branch is deleted too (closed MRs keep theirs).
 2. Once a day, on the first pass after JANITOR_CLEAN_HOUR (default 19), or on the next pass if yesterday's
    clean was missed (laptop asleep or off): delete native build output (JANITOR_BUILD_DIRS) in worktrees
    nobody has touched for 24 hours. Rebuilds recreate it.
-3. Never: a dirty worktree, unpushed commits, a branch without an MR (reviews, previews, spikes), someone
-   else's MR, the default branch, or anything outside .worktrees. Those are reported, not touched.
+3. Never: a dirty worktree, a HEAD that is not a merged or closed MR's head (new commits, or a new task on
+   a reused branch name), a branch without an MR (reviews, previews, spikes), someone else's MR, the
+   default branch, or anything outside .worktrees. Those are reported, not touched.
 4. Every action and every finding is appended to state/report.log, which the coordinator watches.
 
 GitLab only: it asks `glab api` about each worktree's branch, on the host of the repo's `origin`.
@@ -23,8 +24,9 @@ Settings (environment):
 
 Usage: janitor.py --once [--dry-run]   one pass
        janitor.py --wait                block until report.log grows, then print the new lines
+       janitor.py --self-check          its tests: one pass on a throwaway repo, with a stub glab
 """
-import json, os, shutil, subprocess, sys, time, urllib.parse
+import contextlib, io, json, os, shutil, subprocess, sys, tempfile, time, urllib.parse
 from datetime import datetime, timedelta
 from pathlib import Path
 
@@ -110,12 +112,6 @@ def worktrees():
     return out
 
 
-def unpushed(wt, head, mr_shas):
-    if head in mr_shas:
-        return 0
-    return int(git(wt, "rev-list", "--count", "HEAD", "--not", "--remotes") or 0)
-
-
 def last_touch(wt):
     """Newest mtime of the worktree's HEAD, index and HEAD reflog: a checkout, commit or stage."""
     gitdir = gitdir_of(wt)
@@ -146,18 +142,23 @@ def remove_merged(dry):
             continue  # no MR of ours: left alone, listed in the daily summary
         if any(m["state"] in ("opened", "locked") for m in ours):
             continue
-        dirty = git(wt, "status", "--porcelain")
-        n = unpushed(wt, git(wt, "rev-parse", "HEAD"), {m["sha"] for m in ours if m.get("sha")})
-        mr = max(ours, key=lambda m: m["updated_at"])
+        head = git(wt, "rev-parse", "HEAD")
+        # Only an MR whose head is this HEAD counts: an older MR on a reused branch name doesn't.
+        done = [m for m in ours if m.get("sha") == head]
+        mr = max(done or ours, key=lambda m: m["updated_at"])
         ref = f"{project}!{mr['iid']} {mr['state']}"
-        if dirty:
+        if git(wt, "status", "--porcelain"):
             lines.append(f"KEEP {name}: {ref}, but uncommitted changes; decide")
             continue
-        if n:
-            lines.append(f"KEEP {name}: {ref}, but {n} unpushed commit(s); decide")
+        if not done:
+            lines.append(f"KEEP {name}: {ref}, but HEAD {head[:8]} is not the head of a merged or closed MR "
+                         "(new commits, or a new task on a reused branch name); decide")
             continue
         if not dry:
-            sh(["git", "-C", str(main), "worktree", "remove", str(wt)], check=True)
+            r = sh(["git", "-C", str(main), "worktree", "remove", str(wt)])
+            if r.returncode != 0:  # locked, submodules: report it and go on with the pass
+                lines.append(f"KEEP {name}: {ref}, but worktree remove failed: {' '.join(r.stderr.split())}; decide")
+                continue
             sh(["git", "-C", str(main), "branch", "-D", branch])
         lines.append(f"REMOVED worktree {name} ({ref})")
         if mr["state"] == "merged" and git(main, "ls-remote", "--heads", "origin", branch):
@@ -222,8 +223,92 @@ def wait():
         print(f.read(), end="")
 
 
+def self_check():
+    """One real pass on a throwaway repo, origin and worktrees, with a stub glab. Touches nothing else."""
+    global WT_ROOT, STATE, REPORT
+    tmp = Path(tempfile.mkdtemp(prefix="janitor-check-")).resolve()
+    try:
+        os.environ.update({"GIT_CONFIG_GLOBAL": os.devnull, "GIT_CONFIG_NOSYSTEM": "1", "JANITOR_AUTHOR": "me",
+                           "JANITOR_CHECK_MRS": str(tmp / "mrs.json"),
+                           "PATH": f"{tmp / 'bin'}{os.pathsep}{os.environ.get('PATH', '')}"})
+        for who in ("AUTHOR", "COMMITTER"):
+            os.environ[f"GIT_{who}_NAME"], os.environ[f"GIT_{who}_EMAIL"] = "check", "check@example.com"
+        (tmp / "bin").mkdir()
+        stub = tmp / "bin/glab"  # answers `glab api .../merge_requests?source_branch=<b>` from mrs.json
+        stub.write_text("#!/usr/bin/env python3\nimport json, os, sys, urllib.parse\n"
+                        "q = urllib.parse.parse_qs(urllib.parse.urlsplit(sys.argv[-1]).query)\n"
+                        "mrs = json.load(open(os.environ['JANITOR_CHECK_MRS']))\n"
+                        "print(json.dumps(mrs.get(q['source_branch'][0], [])))\n")
+        stub.chmod(0o755)
+        WT_ROOT, STATE = tmp / ".worktrees", tmp / "state"
+        REPORT = STATE / "report.log"
+        origin, main = tmp / "origin.git", tmp / "app"
+        sh(["git", "init", "-q", "--bare", "-b", "main", str(origin)], check=True)
+        sh(["git", "init", "-q", "-b", "main", str(main)], check=True)
+        sh(["git", "-C", str(main), "remote", "add", "origin", origin.as_uri()], check=True)
+        sh(["git", "-C", str(main), "commit", "-q", "--allow-empty", "-m", "base"], check=True)
+        sh(["git", "-C", str(main), "push", "-q", "origin", "main"], check=True)
+
+        def worktree(task, branch):
+            """A worker's worktree as launch-worker.sh makes it, with one pushed commit."""
+            wt = WT_ROOT / "app" / task
+            sh(["git", "-C", str(main), "worktree", "add", "-q", "--no-track", "-b", branch, str(wt), "origin/main"],
+               check=True)
+            sh(["git", "-C", str(wt), "commit", "-q", "--allow-empty", "-m", task], check=True)
+            sh(["git", "-C", str(wt), "push", "-q", "origin", branch], check=True)
+            return wt, git(wt, "rev-parse", "HEAD")
+
+        def mr(iid, state, sha):
+            return {"iid": iid, "state": state, "sha": sha, "author": {"username": "me"},
+                    "updated_at": f"2026-01-{iid:02d}T00:00:00Z"}
+
+        ahead, ahead_head = worktree("ahead", "feat-ahead")
+        sh(["git", "-C", str(ahead), "commit", "-q", "--allow-empty", "-m", "after the merge"], check=True)
+        locked, locked_head = worktree("locked", "feat-locked")
+        sh(["git", "-C", str(main), "worktree", "lock", str(locked)], check=True)  # `worktree remove` refuses it
+        merged, merged_head = worktree("merged", "feat-done")
+        reused, _ = worktree("reused", "fix-login")
+        old_login = git(main, "commit-tree", "HEAD^{tree}", "-p", "HEAD", "-m", "an earlier fix-login")
+        (tmp / "mrs.json").write_text(json.dumps({
+            "feat-ahead": [mr(2, "merged", ahead_head)],
+            "feat-done": [mr(3, "merged", merged_head)],
+            "feat-locked": [mr(4, "merged", locked_head)],
+            "fix-login": [mr(7, "merged", old_login)],  # an earlier task on the same branch name
+        }))
+
+        with contextlib.redirect_stdout(io.StringIO()):
+            pass_once(dry=False)
+        out = REPORT.read_text()
+        lines = [l.split(" ", 2)[2] for l in out.splitlines()]  # without the timestamp
+
+        def has(repo, ref):
+            return sh(["git", "-C", str(repo), "rev-parse", "-q", "--verify", ref]).returncode == 0
+
+        # A merged MR whose head is the worktree's HEAD: the worktree and both branches go.
+        assert any(l.startswith("REMOVED worktree app/merged [feat-done]") for l in lines), out
+        assert not merged.exists() and not has(main, "refs/heads/feat-done"), out
+        assert not git(main, "ls-remote", "--heads", "origin", "feat-done"), out
+        # A worktree git won't remove (locked, submodules): kept with git's error, and the pass goes on.
+        assert any(l.startswith("KEEP app/locked [feat-locked]") and "worktree remove failed" in l for l in lines), out
+        assert locked.is_dir() and has(main, "refs/heads/feat-locked"), out
+        assert git(main, "ls-remote", "--heads", "origin", "feat-locked"), out
+        assert any(l.startswith("DAILY build clean done") for l in lines), out
+        # A commit after the merge: kept, and reported.
+        assert any(l.startswith("KEEP app/ahead [feat-ahead]") for l in lines), out
+        assert ahead.is_dir() and has(main, "refs/heads/feat-ahead"), out
+        # A new task on a reused branch name, with only an old merged MR at another commit: kept, and reported.
+        assert any(l.startswith("KEEP app/reused [fix-login]") for l in lines), out
+        assert reused.is_dir() and has(main, "refs/heads/fix-login"), out
+        assert git(main, "ls-remote", "--heads", "origin", "fix-login"), out
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
+    print("self-check ok")
+
+
 if __name__ == "__main__":
-    if "--wait" in sys.argv:
+    if "--self-check" in sys.argv:
+        self_check()
+    elif "--wait" in sys.argv:
         wait()
     elif "--once" in sys.argv:
         pass_once("--dry-run" in sys.argv)

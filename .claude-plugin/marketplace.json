@@ -8,7 +8,7 @@
     {
       "name": "the-forge",
       "source": "./plugins/the-forge",
-      "description": "Workflow for parallel Claude Code sessions: one lead session hands tasks to worker sessions, each in its own worktree and tmux session. Skills coordinate-workers (the lead) and work-for-coordinator (each worker), a launch script, workspace templates, permission profiles, optional helper templates (comms watcher, MR watch, janitor, load check, e2e runner, tracker helper, and a scribe for teams with an LLM wiki), and an optional module-boundary lint example.",
+      "description": "Workflow for parallel Claude Code sessions: one lead session hands tasks to worker sessions, each in its own worktree and tmux session. Skills coordinate-workers (the lead) and work-for-coordinator (each worker), plus merge-train, integration-build, qa-handoff, review-loop, review-round, browser-worker and meeting-prep; launch and close scripts, workspace templates, permission profiles (research, code, device, browser, watcher), optional helper templates (a headless comms watcher that writes digest files, MR watch, janitor, load check, e2e runner, tracker helper, and a headless scribe for teams with an LLM wiki), and an optional module-boundary lint example.",
       "category": "the-forge"
     }
   ]

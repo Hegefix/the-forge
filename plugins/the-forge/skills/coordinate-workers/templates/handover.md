@@ -11,7 +11,11 @@ Last updated: **<yyyy-mm-dd hh:mm>**, by coordinator `<session name>`.
    - If both are alive, pick a new name and tell every live worker: "coordinator is now `<name>`".
 2. Read, in this order: the workspace `CLAUDE.md` (settings, standing rules); this note; the dashboard, if there is one; the last ~40 lines of the decision log.
 3. Run `ListAgents` and `tmux ls`, and compare them with "Live workers" and "Helpers" below. To read a worker's screen without interrupting it: `tmux capture-pane -t <session> -p | tail -40`.
-4. On a workday, start the helpers that aren't running, and arm the background waiters (`janitor.py --wait`, `wait_change.sh`). Run `load.sh` once.
+4. On a workday, start the helpers that aren't running, and arm the background waiters of the helpers the workspace uses. Run `load.sh` once.
+   - Comms watcher and scribe, one waiter for both: `python3 -I coordination/tools/comms-watch/wait_digest.py coordination/tools/comms-watch/state/digests coordination/tools/scribe/state/notices` (leave out the scribe's folder if it doesn't run).
+   - MR watch: `python3 -I coordination/tools/mr-watch/wait_event.py`
+   - Janitor: `python3 -I coordination/tools/janitor/janitor.py --wait`
+   - Load watch: `coordination/tools/load-check/wait_change.sh`
 5. Check what changed since "Last updated": the places under "Watch", and open MRs.
 6. Tell <the human> in one line: "took over, open: …".
 
@@ -48,7 +52,7 @@ Last updated: **<yyyy-mm-dd hh:mm>**, by coordinator `<session name>`.
 
 One deliverable per worker: close it when its MR merges or is handed over, or when it's idle with a transcript over ~30 MB, and log it. The janitor removes merged worktrees and branches.
 
-**Helpers:** <comms-watch, mr-watch, janitor, load-watch, scribe (optional): running | stopped | not used>. Last janitor report: <time, what it left for a decision>.
+**Helpers:** <comms-watch, mr-watch, janitor, load-watch, scribe (optional): running | stopped | not used>. Waiters in the background: <`wait_digest.py` over the digests and the scribe's notices, `wait_event.py`, `janitor.py --wait`, `wait_change.sh`>. Last janitor report: <time, what it left for a decision>.
 
 **Scarce resources:** <resource> held by <worker> since <time> | all free.
 
@@ -73,4 +77,6 @@ Things learned the hard way, one line each. A few from earlier workspaces, to ke
 - A settings file with a `//` comment is ignored without an error, and then the profile blocks nothing. Keep profiles strict JSON.
 - A DM sent to a channel ID taken from a log line went to the wrong person, because the log had mislabelled it. Send to the user ID, or read the channel first and check who is in it.
 - Tracker transition ids differ per issue type: the id for "In Review" on one type was "Blocked" on another. Look transitions up by the target status name.
+- A block from your own permission classifier is not the remote site refusing. Say which one it was ("the classifier blocked my save", not "the site didn't let me in"), or the human chases the wrong problem.
+- Chat sends can ask the human for an approval click every time (an organization policy on the chat connector; no local allow rule turns it off). Put several items into one message.
 - <…>

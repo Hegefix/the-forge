@@ -1,0 +1,45 @@
+{
+  "model": "sonnet",
+  "timeout_s": 360,
+  "max_usd": 3,
+  "timezone": "",
+  "schedule": [
+    {"days": [1, 2, 3, 4, 5], "from": "08:00", "to": "19:00", "every_min": 7},
+    {"days": [1, 2, 3, 4, 5], "from": "19:00", "to": "23:00", "every_min": 20}
+  ],
+  "otherwise_every_min": 120,
+  "full_sweep_min": 45,
+  "lookback_min": 10,
+  "decision_log": "coordination/decision-log.md",
+  "human": "<the human's display name, as chat, tracker and mail show it>",
+  "chat": {
+    "kind": "slack",
+    "server": "<chat MCP server, e.g. claude_ai_Slack>",
+    "tools": ["slack_list_user_channels", "slack_read_channel", "slack_read_thread",
+              "slack_search_public_and_private", "slack_search_public", "slack_search_channels",
+              "slack_search_users", "slack_read_user_profile"],
+    "user_id": "<the human's chat user id>",
+    "key_channels": ["<channel id>"],
+    "key_dms": ["<user id>"],
+    "watch_people": [{"name": "<who, e.g. the human's manager>", "user_id": "<user id>"}]
+  },
+  "sources": [
+    {"name": "tracker", "server": "<tracker MCP server, e.g. claude_ai_Atlassian>",
+     "tools": ["searchJiraIssuesUsingJql", "getJiraIssue", "atlassianUserInfo", "getAccessibleAtlassianResources",
+               "lookupJiraAccountId"],
+     "how": "searchJiraIssuesUsingJql with <JQL, e.g. project = KEY AND updated >= \"-{minutes}m\">; then the comments of every updated issue (fields: [\"comment\"])"},
+    {"name": "wiki", "server": "<wiki MCP server, e.g. claude_ai_Atlassian>",
+     "tools": ["searchConfluenceUsingCql", "getConfluencePage", "getConfluencePageFooterComments",
+               "getConfluencePageInlineComments", "getConfluenceCommentChildren"],
+     "how": "searchConfluenceUsingCql with: type = comment AND lastmodified > \"{since_local}\"; keep comments on pages the human created or watches, or that mention them"},
+    {"name": "mail", "server": "<mail MCP server, e.g. claude_ai_Microsoft_365>",
+     "tools": ["outlook_email_search", "read_resource", "get_me"],
+     "how": "outlook_email_search for inbox mail received after {since_utc}"},
+    {"name": "team-chat", "server": "<second chat MCP server, e.g. claude_ai_Microsoft_365>",
+     "tools": ["teams_list_chats", "chat_message_search", "read_resource"],
+     "how": "teams_list_chats(limit=5) returns the chats with the newest messages; read the new messages of each chat updated after {since_utc}; next page only when every chat on the page was updated in the window; mentions of the human in channels with chat_message_search"}
+  ],
+  "git": {"todos": true, "username": "", "mr_watch_runs": true},
+  "hints": ["<a label rule for this workspace, e.g. \"top-level asks in #engineering are at least judgment\">"],
+  "deny_servers": []
+}

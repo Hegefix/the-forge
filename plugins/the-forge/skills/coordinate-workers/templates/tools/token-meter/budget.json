@@ -1,0 +1,13 @@
+{
+  "weekly_opus_eq": "<the plan's weekly limit in Opus-equivalent tokens, a number; see calibration>",
+  "calibration": "<how you measured it: 'N % of the weekly limit at <time> = X Opus-equivalent tokens by meter.py window <from> <to>'. Limit = X / (N / 100).>",
+  "week_resets": {"weekday": 0, "hour": 0},
+  "workdays": [0, 1, 2, 3, 4],
+  "reserve": 0.10,
+  "day_yellow": 0.70,
+  "day_red": 0.90,
+  "week_red": 0.90,
+  "max_big_workers": 3,
+  "weights": {"opus": 1.0, "sonnet": 0.6, "haiku": 0.2, "fable": 1.0},
+  "helper_model": "sonnet"
+}

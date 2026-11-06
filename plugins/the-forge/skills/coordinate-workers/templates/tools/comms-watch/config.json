@@ -4,10 +4,9 @@
   "max_usd": 3,
   "timezone": "",
   "schedule": [
-    {"days": [1, 2, 3, 4, 5], "from": "08:00", "to": "19:00", "every_min": 7},
-    {"days": [1, 2, 3, 4, 5], "from": "19:00", "to": "23:00", "every_min": 20}
+    {"days": [1, 2, 3, 4, 5], "from": "09:00", "to": "18:00", "every_min": 20}
   ],
-  "otherwise_every_min": 120,
+  "otherwise_every_min": 0,
   "full_sweep_min": 45,
   "lookback_min": 10,
   "decision_log": "coordination/decision-log.md",

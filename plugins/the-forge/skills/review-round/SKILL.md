@@ -13,8 +13,8 @@ A research worker reviews the MR and returns a verdict with a comment the human 
 ## Start it
 
 - **As soon as the human is added as a reviewer,** without being asked. Again when new commits land after their review.
-- **A worker with the `research` profile,** with a worktree on the MR's source branch: `launch-worker.sh --base origin/<source-branch> --branch review/<n> --profile research`. Never a background subagent: it would run with the coordinator's permissions, approve and comment included, limited only by its prompt.
-- The brief: `references/review-brief.md`.
+- **A worker with the `research` profile,** with a worktree on the MR's source branch: `bash ${CLAUDE_PLUGIN_ROOT}/skills/coordinate-workers/scripts/launch-worker.sh … --base origin/<source-branch> --branch review/<n> --profile research`. Never a background subagent: it would run with the coordinator's permissions, approve and comment included, limited only by its prompt.
+- The brief: `${CLAUDE_SKILL_DIR}/references/review-brief.md`.
 
 ## What the worker does
 

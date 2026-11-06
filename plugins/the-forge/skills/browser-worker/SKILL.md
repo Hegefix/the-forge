@@ -13,9 +13,9 @@ Browser work goes to one worker with the `browser` profile. The coordinator neve
 
 ## Launch it (coordinator)
 
-- `launch-worker.sh --profile browser …`. The script adds `--chrome`, because the browser tools load only with it. The profile also blocks file edits (notes stay possible with `Write`), commits, pushes, device commands, chat, mail and tracker writes.
+- `bash ${CLAUDE_PLUGIN_ROOT}/skills/coordinate-workers/scripts/launch-worker.sh … --profile browser`. The script adds `--chrome`, because the browser tools load only with it. The profile also blocks file edits (notes stay possible with `Write`), commits, pushes, device commands, chat, mail and tracker writes.
 - **One browser worker at a time:** there is one browser.
-- **The brief** (`references/browser-brief.md`) names the sites, the exact actions, the values to set, and what to report. Text to post anywhere is quoted exactly as the human approved it.
+- **The brief** (`${CLAUDE_SKILL_DIR}/references/browser-brief.md`) names the sites, the exact actions, the values to set, and what to report. Text to post anywhere is quoted exactly as the human approved it.
 - If the browser extension is disconnected, the human reconnects it. Don't route the work through another session.
 
 ## Rules for the worker

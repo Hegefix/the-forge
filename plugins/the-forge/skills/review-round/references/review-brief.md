@@ -16,4 +16,4 @@ Check:
 
 Never post, approve, comment, resolve, push or change anything in git hosting, the tracker or chat. Never print tokens or env files. A blocked action is `BLOCKED by permission: <action>`; don't work around it.
 
-Report in at most 20 lines: the verdict (approve / approve with nits / request changes), one line per point with `file:line`, and a ready-to-post comment in short plain English (2–5 sentences, in <the human>'s voice, no agent names), or "no comment needed". Then stop.
+Report in at most 20 lines: the verdict (approve / approve with nits / request changes), one line per point and per finding, each with a severity and `file:line`, and a ready-to-post comment in short plain English (2–5 sentences, in <the human>'s voice, no agent names), or "no comment needed". Then stop.

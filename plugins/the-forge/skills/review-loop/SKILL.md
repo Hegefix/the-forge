@@ -19,13 +19,13 @@ Read the full discussion through the API, not the notification. Then:
 | Mechanical | a typo, a named missing test, a rule the repo requires, dead code | a worker fixes; the coordinator replies with the commit |
 | Judgment we agree with, one obvious fix | a real bug the reviewer found | a worker fixes, with a test that fails without the fix; the coordinator replies |
 | Judgment with several fixes, or we disagree | an alternative design, scope, architecture, "won't do" | the human decides (a D item, with the reply text in the batch) |
-| Valid but out of scope | "also clean up X elsewhere" | reply "follow-up"; a new ticket only after the human's OK |
+| Valid but out of scope | "also clean up X elsewhere" | reply "follow-up"; a line in the task's `deferred.md` (by the fix worker, or by you when none runs); the ticket draft goes to the human with the feature's retrospective, or sooner if urgent |
 
 Unsure which kind: treat it as judgment.
 
 ## Fix
 
-- One fresh worker per MR (or one for a few small MRs, one after the other), started from the evidence folder. The brief lists each thread: id, `file:line`, the reviewer's words, what we do (`references/fix-brief.md`).
+- One fresh worker per MR (or one for a few small MRs, one after the other), started from the evidence folder. The brief lists each thread: id, `file:line`, the reviewer's words, what we do (`${CLAUDE_SKILL_DIR}/references/fix-brief.md`).
 - The worker fixes, adds the test, runs the checks, pushes normally, and reports the commit plus one ready reply per thread: 1–2 plain sentences saying what changed, with the commit.
 - It doesn't touch the title, labels, reviewers or the human's check line.
 - Stop after 5 fix rounds on one MR and report. Never weaken a test.

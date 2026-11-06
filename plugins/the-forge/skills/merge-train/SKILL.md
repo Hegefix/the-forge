@@ -50,9 +50,10 @@ After the last MR: smoke plus one flow per merged ticket, from the default branc
 
 - Keep a train worktree until its MR has merged; the janitor (or you) removes it after.
 - Move the ticket as the workspace says, for example to the QA status (skill `qa-handoff`).
-- Close the train worker when the train is done (`close-worker.sh`).
+- Close the train worker when the train is done (`bash ${CLAUDE_PLUGIN_ROOT}/skills/coordinate-workers/scripts/close-worker.sh <session>`).
+- After a feature's last MR and its sign-off, its retrospective (`coordinate-workers`).
 
-`references/train-brief.md` is a brief for the train worker.
+`${CLAUDE_SKILL_DIR}/references/train-brief.md` is a brief for the train worker.
 
 ## Red flags
 

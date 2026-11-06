@@ -5,7 +5,7 @@
 # Usage:
 #   launch-worker.sh --repo <path> --task <slug> --name <worker-name> --brief <file>
 #                    [--branch <name>] [--base <ref>] [--workspace <dir>]
-#                    [--permission-mode <mode>] [--profile <name|path>]
+#                    [--permission-mode <mode>] [--model <model>] [--profile <name|path>]
 #                    [--reuse-worktree] [--no-window] [--dry-run]
 #
 #   --repo             any checkout of the target repository
@@ -19,6 +19,8 @@
 #   --base             start point (default: the remote's default branch, freshly fetched)
 #   --workspace        coordinator workspace root (default: the current directory)
 #   --permission-mode  passed to `claude --permission-mode` (default: the user's own default)
+#   --model            passed to `claude --model` (for example `sonnet`): a smaller model for mechanical
+#                      work. Default: the user's own default.
 #   --profile          permission profile, passed to `claude --settings`: a name such as `code`
 #                      (<workspace>/coordination/permission-profiles/<name>.json) or a path to a
 #                      JSON file. Refused if missing, not valid JSON or still holding a <placeholder>.
@@ -37,12 +39,12 @@ stop() {
   exit 1
 }
 
-repo="" task="" name="" brief="" branch="" base="" workspace="$PWD" mode="" profile=""
+repo="" task="" name="" brief="" branch="" base="" workspace="$PWD" mode="" profile="" model=""
 reuse=false window=true dry_run=false
 
 while (($#)); do
   case "$1" in
-    --repo | --task | --name | --brief | --branch | --base | --workspace | --permission-mode | --profile)
+    --repo | --task | --name | --brief | --branch | --base | --workspace | --permission-mode | --model | --profile)
       (($# >= 2)) || stop "$1 needs a value"
       case "$1" in
         --repo) repo="$2" ;;
@@ -53,6 +55,7 @@ while (($#)); do
         --base) base="$2" ;;
         --workspace) workspace="$2" ;;
         --permission-mode) mode="$2" ;;
+        --model) model="$2" ;;
         --profile) profile="$2" ;;
       esac
       shift 2
@@ -152,6 +155,7 @@ fi
 
 claude_args=("$claude_bin")
 [[ -n "$mode" ]] && claude_args+=(--permission-mode "$mode")
+[[ -n "$model" ]] && claude_args+=(--model "$model")
 [[ -n "$profile" ]] && claude_args+=(--settings "$profile_file")
 # The browser profile is the only one that leaves the browser tools in, and they need --chrome to load.
 [[ "$(basename "${profile_file:-}")" == browser.json ]] && claude_args+=(--chrome)

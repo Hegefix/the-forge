@@ -69,7 +69,7 @@ key conversations, replies to the human) with its read tools.
 
 Run the query from the first message. Then every new comment not from the human, and every status change
 made by someone else. **Never label a ticket update "own" from the search result alone:** the search doesn't
-say who changed it. For every updated issue, fetch its comments and check each comment whose `created` OR
+say who changed it. For every updated issue, fetch its comments and check each comment whose `created` or
 `updated` is in the window: its author decides. The human's and the agents' edits are own; anyone else's new
 or edited comment is a real item. QA comments are usually `human` or `judgment`.
 

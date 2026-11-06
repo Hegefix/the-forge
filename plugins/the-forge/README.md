@@ -6,8 +6,8 @@ A workflow for running parallel Claude Code sessions. One lead session (the coor
 
 | Part | What it is |
 |---|---|
-| [`coordinate-workers`](skills/coordinate-workers/SKILL.md) | Skill for the coordinator: workspace setup, launching workers, helpers, agent lifetime, delivery from Draft to merge, the tracker, decision classes, escalation batches, decision log, standing rules. |
-| [`work-for-coordinator`](skills/work-for-coordinator/SKILL.md) | Skill for a worker: who decides what, how to ask, permission blocks, scarce resources, e2e scope, the delivery checklist (one MR per feature, Risk score, a short MR description, walkthrough, review triage, merge train, ticket sign-off). |
+| [`coordinate-workers`](skills/coordinate-workers/SKILL.md) | Skill for the coordinator: workspace setup, launching workers, helpers, agent lifetime, delivery from Draft to merge, feature retrospectives, the tracker, decision classes, escalation batches, decision log, standing rules. |
+| [`work-for-coordinator`](skills/work-for-coordinator/SKILL.md) | Skill for a worker: who decides what, how to ask, permission blocks, scarce resources, e2e scope, the delivery checklist (one MR per feature, Risk score, a short MR description, a self-review by reviewer subagents with one lens each, a `deferred.md` for work outside the task, walkthrough, review triage, merge train, ticket sign-off). |
 | [`merge-train`](skills/merge-train/SKILL.md) | Skill: approved MRs land in the default branch one at a time. A worker merges the default branch into each and reports `ready: <sha>`; the coordinator merges and says "next". Stacks, tests that break only when two MRs meet, "needs rebase". |
 | [`integration-build`](skills/integration-build/SKILL.md) | Skill: all open MRs in one local branch for a demo or a QA build, with a `conflicts.md` the merge train replays later. Never pushed. |
 | [`qa-handoff`](skills/qa-handoff/SKILL.md) | Skill: a "How to test" per ticket from its acceptance criteria (the MR's decisions win), shared-account limits, ticket moves, one build note. |
@@ -17,10 +17,12 @@ A workflow for running parallel Claude Code sessions. One lead session (the coor
 | [`meeting-prep`](skills/meeting-prep/SKILL.md) | Skill: one page of facts with sources and five lines to say, and ticket drafts in another team's own format. Nothing is created before the human's OK. |
 | [`launch-worker.sh`](skills/coordinate-workers/scripts/launch-worker.sh) | Creates the worktree and branch, starts the worker in tmux with its brief and permission profile (adding `--chrome` for `browser`), and opens a Terminal window. |
 | [`close-worker.sh`](skills/coordinate-workers/scripts/close-worker.sh) | Closes a worker: its Terminal window, then its tmux session. |
-| [`workspace-claude-md.md`](skills/coordinate-workers/templates/workspace-claude-md.md) | The workspace `CLAUDE.md`: settings, helpers, standing rules to keep or delete. |
-| [`handover.md`](skills/coordinate-workers/templates/handover.md), [`decision-log.md`](skills/coordinate-workers/templates/decision-log.md), [`worker-brief.md`](skills/coordinate-workers/templates/worker-brief.md) | The coordination files and the brief every worker starts from. |
+| [`workspace-claude-md.md`](skills/coordinate-workers/templates/workspace-claude-md.md) | The workspace `CLAUDE.md`: settings and the rules that bind workers too. Every worker and helper loads it on every turn, so it stays short. |
+| [`coordinator.md`](skills/coordinate-workers/templates/coordinator.md) | The coordinator's own rules, copied to `coordination/coordinator.md` and read only by the coordinator: helpers, models per role, token budget, chat hours, native builds, standing rules. |
+| [`launch-gated.sh`](skills/coordinate-workers/scripts/launch-gated.sh) | `launch-worker.sh` behind the token budget: refuses on RED, a big model on YELLOW, or too many big-model workers. |
+| [`handover.md`](skills/coordinate-workers/templates/handover.md), [`decision-log.md`](skills/coordinate-workers/templates/decision-log.md), [`worker-brief.md`](skills/coordinate-workers/templates/worker-brief.md), [`retrospective.md`](skills/coordinate-workers/templates/retrospective.md) | The coordination files, the brief every worker starts from, and the brief for a feature's retrospective. |
 | [`permission-profiles/`](skills/coordinate-workers/templates/permission-profiles/README.md) | Deny-rule settings files: `research`, `code`, `device`, `browser` for workers, `watcher` for helpers. |
-| [`tools/`](skills/coordinate-workers/templates/tools/README.md) | Helpers, each optional and independent: the comms watcher (headless passes on a schedule, digest files, a shell check that every conversation with news was read), MR watch, janitor, load check, e2e runner, tracker helper (Markdown to ADF checkboxes), and the scribe for teams that keep an LLM wiki or knowledge base (a gate with no model, a headless pass only when the decision log grew, `save.sh` for notes). Settings in each helper's `config.json`. |
+| [`tools/`](skills/coordinate-workers/templates/tools/README.md) | Helpers, each optional and independent: the comms watcher (headless passes on a schedule, digest files, a shell check that every conversation with news was read), MR watch, janitor, load check, token meter (weekly budget gate), e2e runner, tracker helper (Markdown to ADF checkboxes), and the scribe for teams that keep an LLM wiki or knowledge base (a gate with no model, a headless pass only when the decision log grew, `save.sh` for notes). Settings in each helper's `config.json`. |
 | [`examples/module-boundaries/`](skills/coordinate-workers/templates/examples/module-boundaries/README.md) | Optional example: lint rules that keep modules from importing each other's internals, and pages from importing pages. |
 
 ## Needs
@@ -43,14 +45,16 @@ Install with `claude plugin marketplace add Hegefix/the-forge`, then `claude plu
 
 ```
 <workspace>/
-  CLAUDE.md                      settings, helpers, standing rules
+  CLAUDE.md                      settings and shared rules (loaded by every session)
   coordination/
+    coordinator.md               the coordinator's own rules (read only by the coordinator)
     handover.md                  takeover steps, state, live workers, gotchas
     decision-log.md              every B, C and D decision, results, root causes
     permission-profiles/         research.json, code.json, device.json, browser.json, watcher.json
     tools/                       the helpers you picked: comms-watch/, mr-watch/, janitor/, load-check/,
-                                 e2e/, tracker/, scribe/ (optional)
+                                 token-meter/, e2e/, tracker/, scribe/ (optional)
   .worktrees/<repo>/<task>/      one per worker
-  .evidence/<task>/              MR description drafts, walkthroughs, screenshots, test results
+  .evidence/<task>/              MR description drafts, walkthroughs, screenshots, test results, deferred.md
+  .evidence/<feature>/retro.md   a feature's retrospective
   <repo>/ …
 ```

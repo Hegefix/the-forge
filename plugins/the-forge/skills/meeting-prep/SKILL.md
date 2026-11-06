@@ -14,7 +14,7 @@ Two outputs, both drafts for the human: one page of facts with sources and five 
 
 - **A research worker gathers the facts.** Every fact has a source: `file:line`, a ticket key with its status, a version with its date, a decision-log line. What it couldn't confirm is marked "not confirmed", never guessed.
 - **The `research` profile can't write files,** so the worker sends the page by message or names a file in its scratchpad. The coordinator saves it to `.evidence/<topic>/`.
-- **Shape** (`references/templates.md`): context in two lines, the facts, the options with a recommendation, questions for the other side, and five lines the human can say.
+- **Shape** (`${CLAUDE_SKILL_DIR}/references/templates.md`): context in two lines, the facts, the options with a recommendation, questions for the other side, and five lines the human can say.
 - **Short and plain:** the human reads it minutes before the call.
 
 ## Ticket drafts for another team's board

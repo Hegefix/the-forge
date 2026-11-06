@@ -17,7 +17,7 @@ A tester needs three things and nothing else: a build, a "How to test" per ticke
 
 ## "How to test", per ticket
 
-Shape (`references/how-to-test.md`): the build and platform, the account to use, 3–6 plain steps ("do this, see that") from the acceptance criteria, then out of scope and known limits.
+Shape (`${CLAUDE_SKILL_DIR}/references/how-to-test.md`): the build and platform, the account to use, 3–6 plain steps ("do this, see that") from the acceptance criteria, then out of scope and known limits.
 
 - **Ticket and MR differ:** the MR's decisions win, because what reviewers agreed overrides the ticket text. List every difference for the coordinator, and write the steps the way the code behaves.
 - **Shared test accounts:** name the account, never a password. Write each limit as "never <X> on the shared account": delete it, change its email or password, accept a legal document, finish a one-time test. Where the account lacks data (an empty history, no pending document), say what QA will see instead (the empty state) and what account would show the full screen.
@@ -27,7 +27,7 @@ Shape (`references/how-to-test.md`): the build and platform, the account to use,
 ## Moving tickets
 
 - Post "How to test" (and the evidence comment, if the workspace keeps QA evidence), then move the ticket to the QA status. Never the move alone.
-- Look the transition up by the target status name, never by a hard-coded id.
+- Look the transition up by the target status name, never by a hard-coded id, because ids differ per issue type.
 - A ticket with nothing for manual QA (CI-only checks, tooling) goes to Done with its sign-off comment instead.
 
 ## The build note

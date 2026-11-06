@@ -9,6 +9,7 @@ Scripts that save the coordinator work. Two of them, the comms watcher and the s
 | [Scribe](#scribe-optional) (optional) | `scribe/PASS.md`, `pass.py`, `config.json`, `loop.sh`, `start-headless.sh`, `save.sh`, `push.sh` | gate with no model, one headless `claude -p` pass only when there is news, `watcher` profile | `tmux`, `python3` 3.9+, notes the pass can write (plain files or an MCP server); `git` if they are a git repo |
 | [Janitor](#janitor) | `janitor/janitor.py`, `start.sh` | script | `tmux`, `python3` 3.9+, `glab` logged in, GitLab |
 | [Load check](#load-check) | `load-check/load.sh`, `watch.sh`, `start.sh`, `wait_change.sh` | scripts | macOS, `tmux` |
+| [Token meter](#token-meter) | `token-meter/meter.py`, `budget.json`, `watch.sh`, `start.sh`, `wait_change.sh`, and `../../scripts/launch-gated.sh` | scripts | macOS or Linux, `tmux`, `python3` 3.9+ |
 | [e2e runner](#e2e-runner) | `e2e/run-flows.sh` | script | Maestro |
 | [Tracker helper](#tracker-helper) | `tracker/md2adf.py` | script, run by hand | `python3`; a tracker that stores ADF (Jira, Confluence) |
 
@@ -38,7 +39,7 @@ It reads what's new in chat, the tracker, the wiki, mail and a second chat, plus
 
 | Setting | What it is |
 |---|---|
-| `schedule`, `otherwise_every_min` | The interval: the first window that matches the day (1 = Monday … 7 = Sunday) and time wins, else `otherwise_every_min`. `0` means no passes. A window that crosses midnight is two windows. The default: workdays 08–19 every 7 minutes, 19–23 every 20, otherwise every 2 hours. |
+| `schedule`, `otherwise_every_min` | The interval: the first window that matches the day (1 = Monday … 7 = Sunday) and time wins, else `otherwise_every_min`. `0` means no passes. A window that crosses midnight is two windows. The default: working hours only (workdays 09–18, every 20 minutes), no passes otherwise. The first pass of the next window reads everything since the cursor, so nothing is lost overnight; set the window to the team's working hours, and make it busier or add an off-hours window only if someone needs it. |
 | `timezone` | IANA name, such as `Europe/Berlin`; empty means this machine's local time. |
 | `model`, `max_usd`, `timeout_s` | `sonnet`: a smaller model skipped threads and whole conversations. $3 and 6 minutes per pass. |
 | `full_sweep_min`, `lookback_min` | A full sweep reads every conversation every 45 minutes; quick passes in between read only what the activity search shows. The chat window starts 10 minutes early, because search lags. |
@@ -107,6 +108,18 @@ Settings (environment): `JANITOR_AUTHOR` (your GitLab username; by default the u
 
 Set `LOAD_SKIP_SESSIONS` (a regex, default `janitor|load-watch|mr-watch|comms-watch|scribe`) to the tmux sessions that run no long-lived Claude session, so they don't count as agents. The comms watcher and the scribe run headless passes that keep no transcript.
 
+## Token meter
+
+The plan's weekly token limit is shared by every session. `meter.py` sums the usage of all sessions, subagents and headless passes from the local transcripts (`~/.claude/projects`), weighted to Opus-equivalent by model (`weights` in `budget.json`: Opus 1, Sonnet 0.6, Haiku 0.2; an unknown model counts as 1). The headless helpers keep no transcript, so their `state/runs.log` lines count too.
+
+- `meter.py gate` prints `GREEN | today … | week … | workdays left …`. The week's budget, minus the `reserve`, minus what the week used before today, is spread over the workdays left (today included), so a quiet day leaves more for the next. YELLOW at `day_yellow` of today's share, RED at `day_red` of it or at `week_red` of the whole week.
+- `meter.py report [--days n]` is the per-day table with roles and models; `meter.py window "<from>" "<to>"` sums a stretch (for calibration); `meter.py --self-check` tests it on made-up transcripts.
+- **`budget.json` starts with placeholders, and the gate refuses to run until they are numbers** (exit code 2, first word `CONFIG`). To calibrate: note the plan's usage percentage at a time, run `meter.py window` from the plan's last reset to then, and the limit is the tokens divided by that fraction. Write how you got it into `calibration`, and set `week_resets` (`weekday` 0 = Monday, `hour`) to the plan's reset. `max_big_workers` caps the live workers on a big model.
+- `start.sh` starts token-watch (tmux `token-watch`): the gate every 10 minutes into `state/last`, verdict changes into `state/events.log`. The coordinator keeps `wait_change.sh` running in the background; it returns on each change.
+- **`scripts/launch-gated.sh`** takes the arguments of `launch-worker.sh` and refuses (`STOP: …`, exit 3) on RED, on YELLOW for a big model, or when `max_big_workers` workers on a big model already run. Without a verdict from the meter it stops too. `BUDGET_OVERRIDE=1` skips the gate for one launch; set it only when the human said so. A worker counts as a big-model worker unless `--model` names a Sonnet or Haiku model.
+
+The meter reads only token counts and timestamps from the transcripts; it prints no message text.
+
 ## e2e runner
 
 `run-flows.sh <device-id> <repo-dir> <flow> [flow …]` runs Maestro flows one at a time and prints one line per flow (PASS or FAIL, seconds, the failing step), then `N/M passed`. The full output stays in `logs/` next to the script for 2 days. An agent reads a log only for a failed flow, so a long run costs a few lines of context instead of thousands. Flows live in `<repo-dir>/e2e/maestro/` unless `FLOWS_DIR` says otherwise. It never signs in.
@@ -117,7 +130,4 @@ For another e2e tool, keep the shape: one short line per test, logs on disk, a n
 
 `md2adf.py <file.md | ->` turns Markdown into Atlassian Document Format (ADF). A tracker that stores ADF (Jira, Confluence) shows `- [ ] item` sent as Markdown as plain text. Sent as ADF, it becomes a real checkbox that QA can tick, and that an agent ticks after merge with the evidence. Use it for tickets with "Acceptance criteria" and "Technical requirements" lists, and for evidence comments. It handles headings, paragraphs, bullet lists, task lists and inline code; anything else stays plain text.
 
-Two tracker rules that go with it:
-
-- **Look transitions up by the target status name, never by a hard-coded id.** Transition ids differ per issue type, so an id that means "In Review" on one type can mean "Blocked" on another.
-- **Work that starts now goes into the active sprint; planned work goes to the backlog.** A milestone's tickets or a later follow-up enter a sprint at planning, or when work starts.
+The tracker rules that go with it are under "Tracker" in the `coordinate-workers` skill.

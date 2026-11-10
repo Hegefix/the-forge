@@ -10,6 +10,44 @@ A profile is a Claude Code settings file with only `permissions.deny` rules. `la
 | `browser` | web pages in the human's signed-in browser, such as developer portals, store consoles and CI web pages; started with `--chrome` | the same as `code`, except that the browser stays open; plus file edits (`Write` stays, for notes), commits, pushes, creating or editing PRs/MRs, `gh api` and `glab api`, and every device command |
 | `watcher` | the headless passes of the comms watcher and the scribe, which only read (the scribe also writes its notes) | the same as `code`, except that chat and mail stay readable; plus edits in repos, worktrees and coordination files, commits, pushes, creating or editing PRs/MRs, and `gh api`/`glab api` writes |
 
+## Profiles vs the classifier
+
+Deny rules are hard limits. They are not the only check. In `auto` mode, a classifier judges every tool call that no allow rule covers, and it can block a call the profile allows. A profile only denies, so it never allows anything.
+
+The usual case: a worker with the `code` profile may push its own branch and open a Draft PR/MR, but the classifier still blocks `git push` and `glab mr create` as outward-facing. The worker reports `BLOCKED by permission`, and nothing moves until the human clicks. Expect several blocks a day.
+
+The fix is allow rules in the human's own `~/.claude/settings.json`, not in a profile:
+
+```json
+{
+  "permissions": {
+    "allow": [
+      "Bash(git push origin:*)",
+      "Bash(git push -u origin:*)",
+      "Bash(git push)",
+      "Bash(glab mr create:*)",
+      "Bash(glab mr update:*)"
+    ],
+    "deny": [
+      "Bash(git push * main)",
+      "Bash(git push *:main)",
+      "Bash(git push * main *)",
+      "Bash(git push * --force*)",
+      "Bash(git push -f*)",
+      "Bash(git push * -f*)"
+    ]
+  }
+}
+```
+
+Use `gh pr create:*` and `gh pr edit:*` instead of the `glab` lines if you use GitHub. Change `main` if your default branch has another name. Merge these lists into the rules you already have.
+
+- The allow rules cover only the worker's own branch and a Draft PR/MR. The deny rules are the guard: no push to the default branch, no force push. A deny rule beats an allow rule.
+- A deny on a push to `main` also stops your own direct pushes to `main` from these sessions. Kit and workspace changes then go through a branch and a PR.
+- Keep the classifier for everything else, above all chat sends and anything else other people see. Don't add allow rules for those.
+- The coordinator must not add these rules itself. The classifier blocks a session that edits its own permissions, on purpose. The coordinator writes a small script that adds the rules, and the human reads it and runs it.
+- Check on a new machine: `/permissions` lists the rules in force. If a worker's push or Draft PR/MR is blocked anyway, the allow rules are missing there.
+
 ## The blocks
 
 The five files share these blocks, in this order:

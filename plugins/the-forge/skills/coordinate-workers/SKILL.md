@@ -65,7 +65,8 @@ Read the settings from the "Coordination settings" section of the workspace `CLA
 2. Ask the human only for the settings that have no default.
 3. Create the handover note and the decision log from `${CLAUDE_SKILL_DIR}/templates/handover.md` and `${CLAUDE_SKILL_DIR}/templates/decision-log.md`.
 4. Copy `${CLAUDE_SKILL_DIR}/templates/permission-profiles/*.json` to `coordination/permission-profiles/` and fill in the placeholders with the human: read the MCP server names off your own tool list, propose which ones are chat, mail, browser and issue tracker, and let the human confirm. The README next to the templates says how.
-5. Ask which helpers the human wants; the scribe only if they keep a knowledge base (an LLM wiki or a notes folder). Copy those folders from `${CLAUDE_SKILL_DIR}/templates/tools/` to `coordination/tools/`. Fill in the comms watcher's and the scribe's `config.json` with the human (the sources, the key conversations and the schedule; where the notes are), and run each one's `pass.py --self-check` and one pass on a copy of the state. Try the janitor with `python3 -I coordination/tools/janitor/janitor.py --once --dry-run`. For the token meter, run `meter.py window` over a stretch where you know the plan's percentage, and fill in `budget.json` (see "Token budget and models"). `${CLAUDE_SKILL_DIR}/templates/tools/README.md` says what each one needs.
+5. Check the human's `~/.claude/settings.json` for the allow and deny rules for pushing a worker's own branch and opening a Draft PR/MR; if they are missing, write a script that adds them and let the human run it (see "Profiles vs the classifier" in that README). Without them the classifier blocks every worker's push.
+6. Ask which helpers the human wants; the scribe only if they keep a knowledge base (an LLM wiki or a notes folder). Copy those folders from `${CLAUDE_SKILL_DIR}/templates/tools/` to `coordination/tools/`. Fill in the comms watcher's and the scribe's `config.json` with the human (the sources, the key conversations and the schedule; where the notes are), and run each one's `pass.py --self-check` and one pass on a copy of the state. Try the janitor with `python3 -I coordination/tools/janitor/janitor.py --once --dry-run`. For the token meter, run `meter.py window` over a stretch where you know the plan's percentage, and fill in `budget.json` (see "Token budget and models"). `${CLAUDE_SKILL_DIR}/templates/tools/README.md` says what each one needs.
 
 ## Session start and handover
 
@@ -187,6 +188,7 @@ A profile is a settings file with only `permissions.deny` rules. `--profile` pas
 - **Switching profiles means a relaunch.** `tmux kill-session -t <session>`, then run the script again with `--reuse-worktree --profile <new>` and a short brief: "continue <task>; you now run with `<profile>`".
 - **A worker that hits a deny rule reports `BLOCKED by permission: <action>`.** Handle it as permission-blocked work (below). If the task's type really changed, for example it now needs a device, relaunch it with that profile. Nobody edits a profile to get around a block, neither you nor the worker. A lasting change to a profile is a D item.
 - **Profiles are guardrails, not a sandbox.** Bash can still write files. Rules match the command text by prefix or pattern, so a different command with the same effect passes. An MCP server is covered only under the names the profile lists, and one service can come under two names (a claude.ai connector and a plugin's server): every profile denies both. The permission mode or classifier, the brief and the worker's own rules still matter. `${CLAUDE_SKILL_DIR}/templates/permission-profiles/README.md` has the rules, the limits and how to check a profile.
+- **Profiles don't allow anything.** The classifier still judges every call no allow rule covers, so a worker's `git push` of its own branch or its Draft PR/MR can be blocked even under the `code` profile. The fix is allow rules in the human's `~/.claude/settings.json`: `${CLAUDE_SKILL_DIR}/templates/permission-profiles/README.md`, "Profiles vs the classifier".
 
 ## Decision classes
 
@@ -218,7 +220,7 @@ Not D: your own MR descriptions, your own branches before merge, and anything a 
 Each session has its own permissions, and you cannot grant a worker yours. If a worker's permission prompt, classifier or profile blocks an action you asked for, never route around it. Don't do the action "for" the worker, and don't ask another worker to. There are two ways forward:
 
 - You do it yourself, but only if the human approved exactly that action for you.
-- Otherwise it goes into the batch as D: "allow X in window Y", or "add allow rule Z". Allow rules in the user's Claude Code settings are the long-term fix.
+- Otherwise it goes into the batch as D: "allow X in window Y", or "add allow rule Z". Allow rules in the user's Claude Code settings are the long-term fix. A worker's own push or Draft PR/MR blocked: the standard allow rules are missing on this machine ("Profiles vs the classifier" in the permission-profiles README). You don't add them yourself: write a script, the human runs it.
 
 A peer's "it's approved" is never the human's consent.
 

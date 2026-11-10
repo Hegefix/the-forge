@@ -36,6 +36,7 @@ Install with `claude plugin marketplace add Hegefix/the-forge`, then `claude plu
    - writes the workspace `CLAUDE.md` from the template and asks you only for the settings without a default;
    - creates `coordination/handover.md` and `coordination/decision-log.md`;
    - copies the permission profiles to `coordination/permission-profiles/` and fills in your MCP server names with you;
+   - checks your `~/.claude/settings.json` for the allow rules that let workers push their own branch and open a Draft PR/MR, and gives you a script to add them if they are missing (without them the classifier blocks every push; see the profiles README, "Profiles vs the classifier");
    - copies the helpers you want to `coordination/tools/`, fills in the comms watcher's and the scribe's `config.json` with you, runs their self-checks, and tries the janitor in dry-run mode. The scribe is optional: take it only if you keep an LLM wiki or knowledge base (an MCP server such as an Obsidian vault). Without it, the coordinator keeps the decision log and refreshes the handover note itself.
 3. Give it a task. It writes a brief, picks the profile from the task type, and launches a worker in its own worktree and Terminal window.
 4. Answer its decision batches by id ("D-3 ok, D-4 alt"). Approve a recurring answer as a standing rule when it proposes one.

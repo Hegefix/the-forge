@@ -1,0 +1,28 @@
+{
+  "model": "sonnet",
+  "timeout_s": 420,
+  "max_usd": 2,
+  "timezone": "<IANA name, e.g. Europe/Berlin>",
+  "days": [1, 2, 3, 4, 5],
+  "times": ["09:30", "15:30"],
+  "grace_min": 180,
+  "retry_min": 20,
+  "profile": "coordination/permission-profiles/watcher.json",
+  "repos": ["<group/project>", "<group/project>"],
+  "merged_days": 14,
+  "release": "<release name and date>",
+  "tester": "<the QA person's display name, as the tracker shows it>",
+  "tracker": {
+    "server": "<tracker MCP server, e.g. claude_ai_Atlassian>",
+    "tools": ["searchJiraIssuesUsingJql", "getJiraIssue", "atlassianUserInfo", "getAccessibleAtlassianResources"],
+    "project": "<KEY>",
+    "label": "<the team's label>",
+    "statuses": {"todo": ["To Do"], "in_review": ["In Review"], "test": ["QA Testing"], "done": ["Done"]},
+    "board_jql": "project = <KEY> AND labels = <label> AND sprint in openSprints() AND statusCategory != Done",
+    "overdue_jql": "project = <KEY> AND labels = <label> AND duedate < now() AND statusCategory != Done",
+    "release_jql": "project = <KEY> AND fixVersion = \"<release>\" AND statusCategory != Done"
+  },
+  "hints": [
+    "<the workspace's own rules, one line each, e.g. \"<KEY>-123 is not ours: ignore it\">"
+  ]
+}

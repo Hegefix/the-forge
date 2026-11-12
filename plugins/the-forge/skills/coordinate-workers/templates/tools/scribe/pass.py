@@ -293,12 +293,12 @@ def read_result(trace):
     return result, calls
 
 
-def cost_part(res):
+def cost_part(res, cfg):
     if not res:
         return "cost ?"
     u = res.get("usage") or {}
     tin = u.get("input_tokens", 0) + u.get("cache_creation_input_tokens", 0) + u.get("cache_read_input_tokens", 0)
-    return (f"${res.get('total_cost_usd', 0):.2f} | in {tin / 1000:.0f}k (cache read "
+    return (f"${res.get('total_cost_usd', 0):.2f} | model {cfg.get('model') or 'sonnet'} | in {tin / 1000:.0f}k (cache read "
             f"{u.get('cache_read_input_tokens', 0) / 1000:.0f}k) out {u.get('output_tokens', 0) / 1000:.1f}k | "
             f"turns {res.get('num_turns', '?')}")
 
@@ -340,7 +340,7 @@ def run_pass(cfg):
     def fail(reason, detail, res=None):
         health["fail_streak"] = health.get("fail_streak", 0) + 1
         append("errors.log", f"{stamp} | {reason} | {clean(detail, 600)} | trace: failed-pass.jsonl")
-        append("runs.log", f"{stamp} | FAILED ({reason}) | {time.time() - t0:.0f}s | {cost_part(res)} | cursor kept")
+        append("runs.log", f"{stamp} | FAILED ({reason}) | {time.time() - t0:.0f}s | {cost_part(res, cfg)} | cursor kept")
         if os.path.exists(p("last-pass.jsonl")):
             shutil.copyfile(p("last-pass.jsonl"), p("failed-pass.jsonl"))
         if health["fail_streak"] == ALERT_AFTER:
@@ -449,7 +449,7 @@ def run_pass(cfg):
     lines_part = f"{upto - done} ({done + 1}-{upto})" if upto > done else "0"
     append("runs.log", f"{stamp} | {'DRY | ' if DRY else ''}log lines: {lines_part} | inbox: {len(inbox)} | "
                        f"updated: {', '.join(updated) or '-'} | created: {', '.join(created) or '-'} | "
-                       f"push: {push} | {time.time() - t0:.0f}s | {cost_part(res)} | {clean(out.get('summary'), 500)}")
+                       f"push: {push} | {time.time() - t0:.0f}s | {cost_part(res, cfg)} | {clean(out.get('summary'), 500)}")
     print(f"scribe {stamp}: {'DRY ' if DRY else ''}lines {lines_part}, inbox {len(inbox)}, updated {len(updated)}, "
           f"created {len(created)}, push {push}, {time.time() - t0:.0f}s, ${res.get('total_cost_usd', 0):.2f}, "
           f"tool calls {sum(calls.values())}")

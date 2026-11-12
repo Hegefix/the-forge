@@ -27,6 +27,8 @@ This folder is not a repo. It holds the repos I work on, agent worktrees (`.work
 
 Rules that bind workers too, so they live here and not in `coordination/coordinator.md`. Add a rule when the human approves it for everyone. Examples to keep, adapt or delete:
 
+- **Every MR gets <the human> as assignee,** Draft or not. Reviewers and taking it out of Draft stay with the coordinator.
+- **No manual QA where it adds nothing:** tickets with no user-visible change, and small UI fixes fully covered by e2e and MR screenshots, get the label `no-manual-qa`. They never enter the QA column, and after merge the developer posts a "Verified by dev" comment with the evidence (skill `coordinate-workers`, "Escalating to the human").
 - **Screenshots in the MR for UI changes,** before it leaves Draft. Uploads usually can't be deleted, so capture a test account or test content only, with no personal data. Videos go to the ticket.
 - **Performance check for UI MRs:** before the "ready for your check" line, the worker measures FPS, CPU and RAM on the touched screens, on a release build and the same device, the branch against the default branch. A drop over <10>% FPS or a rise over <15>% CPU holds the line until it's explained or fixed.
 - **e2e for a QA build:** `smoke` plus the flows of the tickets in it. "Green e2e" in the merge rule means the e2e scope in `work-for-coordinator`.

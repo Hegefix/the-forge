@@ -7,7 +7,7 @@
 # It also lists the biggest live agents by transcript size, a proxy for their context and so for what
 # each of their turns costs.
 # Settings (environment): LOAD_SKIP_SESSIONS, a regex of tmux sessions that run no Claude session
-# (default: janitor|load-watch|mr-watch|comms-watch|scribe; the last two run headless passes, no session).
+# (default: janitor|load-watch|mr-watch|comms-watch|board-watch|scribe; the last three run headless passes, no session).
 set -uo pipefail
 ncpu=$(sysctl -n hw.ncpu)
 read -r l1 l5 l15 < <(sysctl -n vm.loadavg | tr -d '{}')
@@ -37,7 +37,7 @@ echo "booted: iOS sims $ios, Android emulators $android | worker tmux sessions $
 # Biggest live agents: the newest transcript in each tmux session's folder. Claude Code keeps transcripts
 # in <config>/projects/<cwd with '/' and '.' as '-'>/<session id>.jsonl.
 projects="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/projects"
-for s in $(tmux ls -F '#{session_name}' 2>/dev/null | grep -v -x -E "${LOAD_SKIP_SESSIONS:-janitor|load-watch|mr-watch|comms-watch|scribe}"); do
+for s in $(tmux ls -F '#{session_name}' 2>/dev/null | grep -v -x -E "${LOAD_SKIP_SESSIONS:-janitor|load-watch|mr-watch|comms-watch|board-watch|scribe}"); do
   d="$projects/$(tmux display -p -t "=$s:" '#{session_path}' | sed 's#[/.]#-#g')"
   f=$(ls -t "$d"/*.jsonl 2>/dev/null | head -1)
   [ -n "$f" ] && echo "$(du -m "$f" | cut -f1) $s"

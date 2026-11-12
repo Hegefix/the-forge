@@ -9,6 +9,13 @@ You live for this one deliverable. Keep your notes in `.evidence/<task>/` good e
 <What to deliver, in 2–5 lines.> Ticket: <key or link | none>.
 Acceptance criteria (user-facing) and technical requirements: <list | see the ticket>.
 
+## Phases
+
+<Delete this section for a task without device work. Otherwise:> Two phases, so a worker doesn't sit idle and hold a window and its context while it waits for a device.
+- **Phase 1 (now):** code and review threads, and the checks that need no device.
+- **Phase 2:** device work (builds, simulator, emulator, e2e) only after my "device go <platform>" naming the platform. Say "build done" when your build ends, so the build slot moves on, and "sim free" when you release the device.
+- I may close you after phase 1 and relaunch you with a short brief: "Phase 2 of `<brief file>`, device go <platform>". Keep your notes in `.evidence/<task>/` good enough for that.
+
 ## Setup
 
 Repo `<repo>`, worktree `<path>`, branch `<branch>` from `<base>`. It is already created: work only there.

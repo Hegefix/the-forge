@@ -345,12 +345,12 @@ def missing_searches(chat, searches):
     return [k for k, ok in need.items() if not ok]
 
 
-def cost_part(res):
+def cost_part(res, cfg):
     if not res:
         return "cost ?"
     u = res.get("usage") or {}
     tin = u.get("input_tokens", 0) + u.get("cache_creation_input_tokens", 0) + u.get("cache_read_input_tokens", 0)
-    return (f"${res.get('total_cost_usd', 0):.2f} | in {tin / 1000:.0f}k (cache read "
+    return (f"${res.get('total_cost_usd', 0):.2f} | model {cfg.get('model') or 'sonnet'} | in {tin / 1000:.0f}k (cache read "
             f"{u.get('cache_read_input_tokens', 0) / 1000:.0f}k) out {u.get('output_tokens', 0) / 1000:.1f}k | "
             f"turns {res.get('num_turns', '?')}")
 
@@ -465,7 +465,7 @@ def run_pass(cfg):
     def fail(reason, detail, res=None):
         health["fail_streak"] = health.get("fail_streak", 0) + 1
         append("errors.log", f"{stamp} | {reason} | {clean(detail, 600)} | trace: failed-pass.jsonl")
-        append("runs.log", f"{stamp} | FAILED ({reason}) | {time.time() - t0:.0f}s | {cost_part(res)} | cursor kept")
+        append("runs.log", f"{stamp} | FAILED ({reason}) | {time.time() - t0:.0f}s | {cost_part(res, cfg)} | cursor kept")
         if os.path.exists(p("last-pass.jsonl")):
             shutil.copyfile(p("last-pass.jsonl"), p("failed-pass.jsonl"))
         if health["fail_streak"] == ALERT_AFTER:
@@ -647,7 +647,7 @@ def run_pass(cfg):
                      + (f", carried {len(miss_ch)}+{len(miss_th)}" if miss_ch or miss_th else ""))
     append("runs.log", f"{stamp} | ok{' (partial: ' + ','.join(failed) + ')' if failed else ''} | items: {len(items)}"
                        f"{f' ({dups} seen before)' if dups else ''} | digest: {name or 'no (no news)'} | "
-                       f"{time.time() - t0:.0f}s | {cost_part(res)}{chat_part}")
+                       f"{time.time() - t0:.0f}s | {cost_part(res, cfg)}{chat_part}")
     print(f"comms-watch {stamp}: {len(real)} new, {noise} noise, {dups} seen before, digest {name or '-'}, "
           f"{time.time() - t0:.0f}s, ${res.get('total_cost_usd', 0):.2f}")
     return 0
@@ -694,7 +694,7 @@ def self_check():
         with open(os.path.join(tmp, "coordination", "decision-log.md"), "w") as f:
             f.write("- 2026-01-01 [C] an earlier decision (decided by: coordinator)\n")
         cfg = {"timezone": "UTC", "human": "Pat", "deny_servers": ["unused"],
-               "schedule": [{"days": [1, 2, 3, 4, 5], "from": "08:00", "to": "19:00", "every_min": 7}],
+               "schedule": [{"days": [1, 2, 3, 4, 5], "from": "08:00", "to": "19:00", "every_min": 20}],
                "otherwise_every_min": 120,
                "chat": {"kind": "slack", "server": ["connector_chat", "plugin_chat_slack"],
                         "tools": ["slack_read_channel", "slack_read_thread", "slack_search_public_and_private",
@@ -708,7 +708,7 @@ def self_check():
             json.dump(cfg, f)
 
         # Schedule: weekday daytime, weekday evening (otherwise), weekend.
-        assert interval(cfg, datetime(2026, 1, 5, 9, 0, tzinfo=TZ)) == 420
+        assert interval(cfg, datetime(2026, 1, 5, 9, 0, tzinfo=TZ)) == 1200
         assert interval(cfg, datetime(2026, 1, 5, 20, 0, tzinfo=TZ)) == 7200
         assert interval(cfg, datetime(2026, 1, 10, 9, 0, tzinfo=TZ)) == 7200
 
@@ -823,6 +823,7 @@ def self_check():
                      "updated >= -", "group/app#12", "group/app#13", "by ?", "an earlier decision", "The human: Pat"):
             assert want in prompt, (want, prompt)
         assert "filler" not in prompt and "partial" not in open(p("runs.log")).read(), open(p("runs.log")).read()
+        assert "| model sonnet | in " in open(p("runs.log")).read(), open(p("runs.log")).read()  # token-meter prices by it
         args = json.load(open(os.path.join(tmp, "args-0.json")))
         assert args[args.index("--permission-mode") + 1] == "dontAsk" and args[args.index("--tools") + 1] == "ToolSearch"
         allowed = args[args.index("--allowedTools") + 1].split(",")

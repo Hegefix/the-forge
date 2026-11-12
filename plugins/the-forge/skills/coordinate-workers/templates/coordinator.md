@@ -23,7 +23,7 @@ The helpers this workspace runs, copied from the kit's `templates/tools/` into `
 | Mechanical workers: merges of the default branch, review-comment fixes, e2e re-runs, QA builds, evidence uploads | a smaller model (`sonnet`) | `launch-gated.sh --model sonnet …` |
 | Self-review lens subagents | a smaller model | `model: "sonnet"` in each Agent call |
 | Tracker clerk (batch of tracker reads and writes) | a small model (`haiku`) | `model: "haiku"` in the Agent call |
-| Scribe, comms watcher | a mid-size model | `model` in their `config.json` (a small one skipped threads and whole conversations) |
+| Scribe, comms watcher | a mid-size model | `model` in their `config.json` |
 | MR watch, load check, janitor, token meter | none | scripts |
 
 A new helper gets the smallest model that does its job. Moving any other role to a smaller model is the human's call.
@@ -33,7 +33,7 @@ A new helper gets the smallest model that does its job. Moving any other role to
 The plan has a weekly limit. The token meter (`coordination/tools/token-meter/`) sums usage from the local transcripts, weighted to Opus-equivalent, and `meter.py gate` says GREEN, YELLOW or RED against `budget.json`.
 
 - Put the gate line in every status to the human.
-- Start workers only through `launch-gated.sh`. GREEN: any model, at most <3> workers on a big model alive. YELLOW: a smaller model only. RED: nothing new; running workers finish their step and checkpoint. `BUDGET_OVERRIDE=1` only on the human's word, for that one launch.
+- Start workers only through `launch-gated.sh`, and obey its verdict (the rules are in the `coordinate-workers` skill, "Token budget and models"). `BUDGET_OVERRIDE=1` only on the human's word, for that one launch.
 - Keep `coordination/tools/token-meter/wait_change.sh` armed; act on each verdict change.
 - Close an agent at its deliverable or at ~10 MB of transcript. Ask the human for a `/compact` or a handover at ~150k tokens of your own context.
 - Big jobs (overnight research, many agents, whole-repo sweeps) need the human's OK with a token estimate, run on a smaller model, and go late in the week, when the unused budget would expire anyway.

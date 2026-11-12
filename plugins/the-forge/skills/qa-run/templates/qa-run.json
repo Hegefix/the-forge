@@ -1,0 +1,34 @@
+{
+  "app": {
+    "ios_bundle_id": "<com.example.app>",
+    "android_package": "<com.example.app>"
+  },
+  "builds": {
+    "ios_simulator": "<where a simulator .app comes from, e.g. CI job artifact name>",
+    "android": "<where the APK comes from, e.g. chat channel, CI artifact, internal track>",
+    "folder": "~/Downloads/qa-builds"
+  },
+  "flows": {
+    "dir": "<path to the Maestro flows, relative to the repo or absolute>",
+    "repo": "<path to the app repo that holds them>",
+    "smoke": ["<flow name>"],
+    "regression": ["<flow name>", "<flow name>"]
+  },
+  "sign_in_command": "<command that signs in on a device, takes --device <id>; empty if none>",
+  "devices": {
+    "ios_phone": "<simulator name>",
+    "ios_tablet": "<iPad simulator name>",
+    "android_phone": "<AVD name>",
+    "android_tablet": "<AVD name>",
+    "android_api_levels": {
+      "<api level, e.g. 29>": "<AVD name>",
+      "<api level>": "<AVD name>"
+    }
+  },
+  "evidence_dir": "~/qa-evidence",
+  "tracker": {
+    "project_key": "<KEY>",
+    "label_no_manual_qa": "<label, if the team uses one>"
+  },
+  "test_accounts": "<which shared accounts exist and their limits, no passwords>"
+}

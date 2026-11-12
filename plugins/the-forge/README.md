@@ -11,6 +11,7 @@ A workflow for running parallel Claude Code sessions. One lead session (the coor
 | [`merge-train`](skills/merge-train/SKILL.md) | Skill: approved MRs land in the default branch one at a time. A worker merges the default branch into each and reports `ready: <sha>`; the coordinator merges and says "next". Stacks, tests that break only when two MRs meet, "needs rebase". |
 | [`integration-build`](skills/integration-build/SKILL.md) | Skill: all open MRs in one local branch for a demo or a QA build, with a `conflicts.md` the merge train replays later. Never pushed. |
 | [`qa-handoff`](skills/qa-handoff/SKILL.md) | Skill: a "How to test" per ticket from its acceptance criteria (the MR's decisions win), shared-account limits, ticket moves, one build note. |
+| [`qa-run`](skills/qa-run/SKILL.md) | Skill for a tester on a Mac: tickets and a build tested on iOS simulators and Android emulators, a PASS / FAIL / BLOCKED table with evidence and a draft tracker comment per ticket (posted only on the tester's "post"), regression runs, a per-project config, Mac setup guide and small scripts. |
 | [`review-loop`](skills/review-loop/SKILL.md) | Skill for our own MRs: triage reviewer threads, fix, reply with the commit, resolve only what we answered, ask again, split MRs between reviewers for a deadline. |
 | [`review-round`](skills/review-round/SKILL.md) | Skill for someone else's MR: a `research` worker returns a verdict and a ready comment; a rebase or squash is compared with the reviewed diff before a new round. |
 | [`browser-worker`](skills/browser-worker/SKILL.md) | Skill: browser work goes to one worker with the `browser` profile and a brief that names the sites and actions. The human signs in; no secrets, messages, purchases or deletions. |
@@ -27,7 +28,7 @@ A workflow for running parallel Claude Code sessions. One lead session (the coor
 
 ## Needs
 
-Install with `claude plugin marketplace add Hegefix/the-forge`, then `claude plugin install the-forge@hegefix`. macOS with Terminal, `tmux`, `git`, `jq` and Claude Code. The comms watcher and the scribe need `python3` 3.9+ and Claude Code's headless mode (`claude -p`; tested with 2.1.317); the comms watcher's git hosting to-dos, the janitor and MR watch need `glab` (GitLab); the e2e runner needs Maestro; the scribe needs notes it can write to. Workers use `ListAgents` and `SendMessage` to talk to the coordinator. A browser worker needs Claude in Chrome.
+Install with `claude plugin install the-forge@hegefix`. macOS with Terminal, `tmux`, `git`, `jq` and Claude Code. The comms watcher and the scribe need `python3` 3.9+ and Claude Code's headless mode (`claude -p`; tested with 2.1.317); the comms watcher's git hosting to-dos, the janitor and MR watch need `glab` (GitLab); the e2e runner needs Maestro; the scribe needs notes it can write to. Workers use `ListAgents` and `SendMessage` to talk to the coordinator. A browser worker needs Claude in Chrome.
 
 ## How to start
 
@@ -36,7 +37,6 @@ Install with `claude plugin marketplace add Hegefix/the-forge`, then `claude plu
    - writes the workspace `CLAUDE.md` from the template and asks you only for the settings without a default;
    - creates `coordination/handover.md` and `coordination/decision-log.md`;
    - copies the permission profiles to `coordination/permission-profiles/` and fills in your MCP server names with you;
-   - checks your `~/.claude/settings.json` for the allow rules that let workers push their own branch and open a Draft PR/MR, and gives you a script to add them if they are missing (without them the classifier blocks every push; see the profiles README, "Profiles vs the classifier");
    - copies the helpers you want to `coordination/tools/`, fills in the comms watcher's and the scribe's `config.json` with you, runs their self-checks, and tries the janitor in dry-run mode. The scribe is optional: take it only if you keep an LLM wiki or knowledge base (an MCP server such as an Obsidian vault). Without it, the coordinator keeps the decision log and refreshes the handover note itself.
 3. Give it a task. It writes a brief, picks the profile from the task type, and launches a worker in its own worktree and Terminal window.
 4. Answer its decision batches by id ("D-3 ok, D-4 alt"). Approve a recurring answer as a standing rule when it proposes one.

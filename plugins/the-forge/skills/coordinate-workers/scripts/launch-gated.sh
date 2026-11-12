@@ -4,14 +4,11 @@
 #
 # Usage: launch-gated.sh <launch-worker.sh arguments>     (--model sonnet for a smaller model)
 #
-#   GREEN   any model, up to max_big_workers live workers on a big model (budget.json, default 3)
-#   YELLOW  a smaller model only (--model sonnet or haiku)
-#   RED     nothing new: running workers finish their step and checkpoint
+# The verdicts (GREEN, YELLOW, RED) and BUDGET_OVERRIDE are described in SKILL.md, "Token budget and models".
 #
-# A worker runs on a big model unless --model names sonnet or haiku. Live big-model workers are counted from
-# the process list: `claude --name <worker>` without --model sonnet|haiku and without -p (a headless pass).
+# A worker runs on a big model unless --model names sonnet or haiku. launch-worker.sh records the tier on the
+# worker's tmux session (`@forge_tier`); the live big-model workers are the sessions marked `big`.
 # The gate fails closed: if the meter cannot give a verdict (budget.json not filled in), it stops.
-# BUDGET_OVERRIDE=1 skips the gate for one launch. Set it only when the human said so for that launch.
 #
 # On a stop it prints `STOP: <reason>` and exits 3. Otherwise it runs launch-worker.sh with the same arguments.
 set -uo pipefail
@@ -44,7 +41,7 @@ if [[ "${BUDGET_OVERRIDE:-0}" != 1 ]]; then
   esac
   if $big; then
     max=$(python3 -I -c 'import json,sys; print(int(json.load(open(sys.argv[1])).get("max_big_workers", 3)))' "$budget" 2>/dev/null || echo 3)
-    n=$(ps -axo command | grep -E '(^|/)claude .*--name ' | grep -v -E -- '--model [a-z0-9.-]*(sonnet|haiku)| -p ' | grep -vc grep)
+    n=$(tmux list-sessions -F '#{@forge_tier}' 2>/dev/null | grep -c '^big$')
     ((n >= max)) && { echo "STOP: $n workers on a big model are running (max $max); wait for one to finish or use --model sonnet"; exit 3; }
   fi
 fi

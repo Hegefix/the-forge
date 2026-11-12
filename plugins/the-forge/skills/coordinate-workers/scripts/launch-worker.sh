@@ -179,6 +179,9 @@ else
       stop "git worktree add failed"
   fi
   tmux new-session -d -s "$session" -c "$worktree" "$tmux_cmd" || stop "tmux new-session failed"
+  # The tier goes on the session, for launch-gated.sh to count live big-model workers.
+  case "$model" in *sonnet* | *haiku*) tier=small ;; *) tier=big ;; esac
+  tmux set-option -t "$session" @forge_tier "$tier" || echo "WARN: could not record the worker's tier" >&2
   if $window; then
     if command -v osascript >/dev/null; then
       # Always a new window. `do script ... in <tab>` would type into a running agent's input.

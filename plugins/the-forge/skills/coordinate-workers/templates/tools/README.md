@@ -1,15 +1,16 @@
 # Helpers
 
-Scripts that save the coordinator work. Two of them, the comms watcher and the scribe, run one headless Claude pass at a time. Copy the folders you want to `<workspace>/coordination/tools/`. The scripts find the workspace from their own place (three folders up), or from `WORKSPACE` if you set it. State, logs and reports stay next to each script.
+Scripts that save the coordinator work. Three of them, the comms watcher, the board watch and the scribe, run one headless Claude pass at a time. Copy the folders you want to `<workspace>/coordination/tools/`. The scripts find the workspace from their own place (three folders up), or from `WORKSPACE` if you set it. State, logs and reports stay next to each script.
 
 | Helper | Files | Kind | Needs |
 |---|---|---|---|
 | [Comms watcher](#comms-watcher) | `comms-watch/PASS.md`, `pass.py`, `config.json`, `loop.sh`, `start-headless.sh`, `wait_digest.py` | shell loop, one headless `claude -p` pass per interval, `watcher` profile | `tmux`, `python3` 3.9+, read access to chat and the tracker; `glab` for the git hosting to-dos |
+| [Board watch](#board-watch) | `board-watch/PASS.md`, `pass.py`, `config.json`, `loop.sh`, `start-headless.sh` | shell loop, one headless `claude -p` pass at set times, `watcher` profile | `tmux`, `python3` 3.9+, read access to the tracker; `glab` for the git hosting |
 | [MR watch](#mr-watch) | `mr-watch/watch_mrs.py`, `wait_event.py`, `start.sh`, `mrs.txt` | script | `tmux`, `python3`, `glab` logged in, GitLab |
 | [Scribe](#scribe-optional) (optional) | `scribe/PASS.md`, `pass.py`, `config.json`, `loop.sh`, `start-headless.sh`, `save.sh`, `push.sh` | gate with no model, one headless `claude -p` pass only when there is news, `watcher` profile | `tmux`, `python3` 3.9+, notes the pass can write (plain files or an MCP server); `git` if they are a git repo |
 | [Janitor](#janitor) | `janitor/janitor.py`, `start.sh` | script | `tmux`, `python3` 3.9+, `glab` logged in, GitLab |
 | [Load check](#load-check) | `load-check/load.sh`, `watch.sh`, `start.sh`, `wait_change.sh` | scripts | macOS, `tmux` |
-| [Token meter](#token-meter) | `token-meter/meter.py`, `budget.json`, `watch.sh`, `start.sh`, `wait_change.sh`, and `../../scripts/launch-gated.sh` | scripts | macOS or Linux, `tmux`, `python3` 3.9+ |
+| [Token meter](#token-meter) | `token-meter/meter.py`, `budget.json`, `statusline.sh`, `watch.sh`, `start.sh`, `wait_change.sh`, and `../../scripts/launch-gated.sh` | scripts | macOS or Linux, `tmux`, `python3` 3.9+ |
 | [e2e runner](#e2e-runner) | `e2e/run-flows.sh` | script | Maestro |
 | [Tracker helper](#tracker-helper) | `tracker/md2adf.py` | script, run by hand | `python3`; a tracker that stores ADF (Jira, Confluence) |
 
@@ -17,7 +18,7 @@ Pick what fits. No helper depends on another one: each works alone, and so does 
 
 ## Headless passes
 
-The comms watcher and the scribe are not long-running Claude sessions. A shell loop in tmux runs `pass.py`, and `pass.py` runs one `claude -p` with an empty context, reads its structured result, and writes the files itself: digests, notices, logs, the cursor. No model runs between passes.
+The comms watcher, the board watch and the scribe are not long-running Claude sessions. A shell loop in tmux runs `pass.py`, and `pass.py` runs one `claude -p` with an empty context, reads its structured result, and writes the files itself: digests, notices, logs, the cursor. No model runs between passes.
 
 - **Why.** A long session on `/loop` re-reads its whole growing context on every pass, and over a day it started to skip reads. In our workspace the `/loop` comms watcher cost about $124 a day, and in 231 passes it read 3 conversations and 4 threads. The headless one starts each pass from a small fixed prompt (7.5k tokens there, against the 55k the `/loop` session carried), and costs about $0.30 per quick pass and $0.60 per full sweep: about $40 a workday. The `/loop` scribe cost $0.48 for a pass with no news and $1.54 for a working one; the headless scribe's gate costs nothing when there is no news.
 - **What a pass may do.** `--permission-mode dontAsk` with an allowlist: only the read tools named in `config.json` run (the scribe: plus the write tools of its notes, limited to the notes' paths), and nothing waits on a prompt. No Bash, no other file tools. `watcher.json`'s deny rules apply on top, and `pass.py` refuses to start a pass without a valid profile. Plugins, hooks, `CLAUDE.md` files and auto memory are switched off for the pass, so it starts small and its system prompt stays cached from pass to pass. One exception: a plugin whose MCP server `config.json` names (`plugin_<plugin>_<server>`) stays on, because switching a plugin off also stops its servers. It loads whole, with its skills and its other servers; put those servers in `deny_servers` to keep their tools out of the pass. A source that names only plugin servers, none of them from an installed plugin, fails every pass with `config` in `errors.log`, since it could never connect. `max_usd` and `timeout_s` cap each pass.
@@ -39,7 +40,7 @@ It reads what's new in chat, the tracker, the wiki, mail and a second chat, plus
 
 | Setting | What it is |
 |---|---|
-| `schedule`, `otherwise_every_min` | The interval: the first window that matches the day (1 = Monday … 7 = Sunday) and time wins, else `otherwise_every_min`. `0` means no passes. A window that crosses midnight is two windows. The default: working hours only (workdays 09–18, every 20 minutes), no passes otherwise. The first pass of the next window reads everything since the cursor, so nothing is lost overnight; set the window to the team's working hours, and make it busier or add an off-hours window only if someone needs it. |
+| `schedule`, `otherwise_every_min` | The interval: the first window that matches the day (1 = Monday … 7 = Sunday) and time wins, else `otherwise_every_min`. `0` means no passes. A window that crosses midnight is two windows. The default: working hours only (workdays 09–18, every 20 minutes), no passes otherwise. Every pass runs the model, and chat and mail come only through connectors, so no check without a model can run before a pass (the git hosting has its own script); a shorter interval costs a model run each time. The first pass of the next window reads everything since the cursor, so nothing is lost overnight; set the window to the team's working hours, and make it busier or add an off-hours window only if someone needs it. |
 | `timezone` | IANA name, such as `Europe/Berlin`; empty means this machine's local time. |
 | `model`, `max_usd`, `timeout_s` | `sonnet`: a smaller model skipped threads and whole conversations. $3 and 6 minutes per pass. |
 | `full_sweep_min`, `lookback_min` | A full sweep reads every conversation every 45 minutes; quick passes in between read only what the activity search shows. The chat window starts 10 minutes early, because search lags. |
@@ -54,6 +55,29 @@ It reads what's new in chat, the tracker, the wiki, mail and a second chat, plus
 **The read check.** For a Slack chat server (`"kind": "slack"`), the first message lists the required chat steps with their exact arguments: the activity search, a read of every conversation and thread it shows, the key conversations, the replies to the human, the watched people, and on a full sweep every conversation. `pass.py` checks the pass's tool calls against them. A missing search counts as a failed chat read: the next pass is a full sweep from the old start. A conversation or thread it didn't read is carried into the next pass as a required read (dropped after 3 tries, since the search still covers it). Each item's message key (Slack channel and ts, Jira comment id) is kept for 48 hours, so the overlap between passes sends nothing twice. Another chat server (`"kind": "other"`) gets the same instructions in words, without the check.
 
 `PASS.md` has the lessons already learned: threads always; an empty search is never "no news"; name a DM by the person who wrote in it; a tracker update counts as "own" only by the comment's author; our own actions are noise; an item already in the decision log is `fyi (handled)`.
+
+## Board watch
+
+Twice a workday (times in `config.json`) it audits the team's tickets (one label, the open sprint, not done) against the open and recently merged MRs of the team's repos, and writes one digest file to `state/digests/` only when something is new compared with the previous pass. Each line is `ticket | status now | problem | proposed action`. The checks: an MR merged but the ticket not in test or done (needs "How to test"); a ticket in review without an open MR; an open MR but the ticket not started; an in-test ticket whose fix merged after the tester's last findings (retest needed); release tickets outside the sprint or unassigned; a missing team label; overdue due dates. It never comments, moves, assigns or merges.
+
+1. Fill in `coordination/tools/board-watch/config.json` (below).
+2. Try it: `python3 -I coordination/tools/board-watch/pass.py --self-check`, then one real pass on a copy of the state: `STATE_DIR=state-test python3 -I coordination/tools/board-watch/pass.py --once`. `state-test/runs.log` shows the cost and the time, `state-test/last-pass.jsonl` is the whole trace.
+3. `coordination/tools/board-watch/start-headless.sh` (tmux `board-watch`).
+4. Add its digest folder to the coordinator's waiter: `python3 -I coordination/tools/comms-watch/wait_digest.py coordination/tools/comms-watch/state/digests coordination/tools/scribe/state/notices coordination/tools/board-watch/state/digests`. A digest from this folder has `board-watch:` as its first line.
+
+`config.json`:
+
+| Setting | What it is |
+|---|---|
+| `times`, `days`, `timezone`, `grace_min` | When a pass runs: each time on each day (1 = Monday … 7 = Sunday) in the IANA `timezone`. A pass missed because the laptop slept runs on wake, up to `grace_min` minutes (180) after its time. A failed pass is tried once more. |
+| `model`, `max_usd`, `timeout_s` | `sonnet`; $2 and 7 minutes per pass. |
+| `repos` | The git hosting projects (`group/project`) whose open MRs, and MRs merged in the last `merged_days` days, the shell reads with `glab api` (GET only). A repo `glab` can't read is named in the pass, and the model says nothing about its MRs. |
+| `tracker` | `server` and the read `tools`; `project`, `label`; `statuses` (the names of to do, in review, in test and done); `board_jql`, `overdue_jql` and `release_jql` (the last is optional: the tickets that must ship in the release named in `release`). |
+| `tester` | The QA person's name, as the tracker shows it: their last comment on a ticket is their last finding. |
+| `hints` | The workspace's own rules, one line each. |
+| `profile` | The `watcher` permission profile, from the workspace root. |
+
+An item counts as new when its ticket, kind and status were not in the previous pass's list; a problem that goes away and comes back is new again. `state/open-items.md` is the full current list, `state/runs.log` one line per pass, `state/errors.log` the failures (a digest says so after 3 in a row).
 
 ## MR watch
 
@@ -106,17 +130,18 @@ Settings (environment): `JANITOR_AUTHOR` (your GitLab username; by default the u
 1. `coordination/tools/load-check/start.sh` starts load-watch (tmux `load-watch`): `load.sh` every minute into `state`, verdict changes into `events.log`.
 2. The coordinator keeps `coordination/tools/load-check/wait_change.sh` running in the background. It returns when the verdict changes.
 
-Set `LOAD_SKIP_SESSIONS` (a regex, default `janitor|load-watch|mr-watch|comms-watch|scribe`) to the tmux sessions that run no long-lived Claude session, so they don't count as agents. The comms watcher and the scribe run headless passes that keep no transcript.
+Set `LOAD_SKIP_SESSIONS` (a regex, default `janitor|load-watch|mr-watch|comms-watch|board-watch|scribe`) to the tmux sessions that run no long-lived Claude session, so they don't count as agents. The comms watcher, the board watch and the scribe run headless passes that keep no transcript.
 
 ## Token meter
 
-The plan's weekly token limit is shared by every session. `meter.py` sums the usage of all sessions, subagents and headless passes from the local transcripts (`~/.claude/projects`), weighted to Opus-equivalent by model (`weights` in `budget.json`: Opus 1, Sonnet 0.6, Haiku 0.2; an unknown model counts as 1). The headless helpers keep no transcript, so their `state/runs.log` lines count too.
+The plan's weekly token limit is shared by every session. `meter.py` sums the usage of all sessions, subagents and headless passes from the local transcripts (`~/.claude/projects`), weighted to Opus-equivalent by model (`weights` in `budget.json`: Opus 1, Sonnet 0.6, Haiku 0.2; an unknown model counts as 1). The headless helpers keep no transcript, so their `state/runs.log` lines count too, at the model on each line and in the helper's `timezone`.
 
-- `meter.py gate` prints `GREEN | today … | week … | workdays left …`. The week's budget, minus the `reserve`, minus what the week used before today, is spread over the workdays left (today included), so a quiet day leaves more for the next. YELLOW at `day_yellow` of today's share, RED at `day_red` of it or at `week_red` of the whole week.
+- `meter.py gate` prints `GREEN | today … | week … | workdays left …`. The week's budget, minus the `reserve`, minus what the week used before today, is spread over the workdays left (today included; with none left, the days left in the week), so a quiet day leaves more for the next. YELLOW at `day_yellow` of today's share, RED at `day_red` of it or at `week_red` of the whole week.
 - `meter.py report [--days n]` is the per-day table with roles and models; `meter.py window "<from>" "<to>"` sums a stretch (for calibration); `meter.py --self-check` tests it on made-up transcripts.
 - **`budget.json` starts with placeholders, and the gate refuses to run until they are numbers** (exit code 2, first word `CONFIG`). To calibrate: note the plan's usage percentage at a time, run `meter.py window` from the plan's last reset to then, and the limit is the tokens divided by that fraction. Write how you got it into `calibration`, and set `week_resets` (`weekday` 0 = Monday, `hour`) to the plan's reset. `max_big_workers` caps the live workers on a big model.
+- **Real usage (optional).** Claude Code pipes session JSON to the `statusLine` command, and on most plans it carries `rate_limits` (`seven_day` and `five_hour` with `used_percentage` and `resets_at`, the numbers `/usage` shows). `statusline.sh` saves them to `state/rate_limits.json` and prints one short line. While that file is under 30 minutes old and its week has not reset, the gate rescales the weekly limit to the real percentage (once it is 5 % or more), using the tokens spent up to the moment it was saved, prints `week N% (real)` instead of `(est)`, and adds the 5-hour percentage. Enable it in the coordinator's own project-local settings (`.claude/settings.local.json` in the workspace folder, so workers don't run it): `{"statusLine": {"type": "command", "command": "<path to>/token-meter/statusline.sh"}}`. It needs `jq`. The field can be missing (some plans, or before the first reply): the script then prints a note, nothing is saved, and the gate falls back to the estimate and the calibrated limit.
 - `start.sh` starts token-watch (tmux `token-watch`): the gate every 10 minutes into `state/last`, verdict changes into `state/events.log`. The coordinator keeps `wait_change.sh` running in the background; it returns on each change.
-- **`scripts/launch-gated.sh`** takes the arguments of `launch-worker.sh` and refuses (`STOP: …`, exit 3) on RED, on YELLOW for a big model, or when `max_big_workers` workers on a big model already run. Without a verdict from the meter it stops too. `BUDGET_OVERRIDE=1` skips the gate for one launch; set it only when the human said so. A worker counts as a big-model worker unless `--model` names a Sonnet or Haiku model.
+- **`scripts/launch-gated.sh`** takes the arguments of `launch-worker.sh` and refuses with `STOP: …` and exit 3. The rules are in SKILL.md, "Token budget and models".
 
 The meter reads only token counts and timestamps from the transcripts; it prints no message text.
 

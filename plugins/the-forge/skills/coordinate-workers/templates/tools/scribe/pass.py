@@ -15,7 +15,7 @@
    (--permission-mode dontAsk + --allowedTools); watcher.json's deny rules still apply. No shell. Writes go to
    the notes only: Edit/Write limited to the notes' paths, or the notes MCP server's write tools.
 4. Then: moves the handled inbox notes to inbox/done/, writes notices for the coordinator to state/notices/
-   (the comms watcher's wait_digest.py on that folder wakes the coordinator), runs push.sh when notes changed and
+   (the inbox reads that folder for the coordinator), runs push.sh when notes changed and
    a notes repo is set, and writes runs.log and the cursor. A failed pass goes to errors.log and keeps the cursor
    and the inbox.
 
@@ -88,7 +88,7 @@ def clean(s, n=None):
 
 
 def notice(lines, now):
-    """A file for the coordinator; its waiter (comms-watch/wait_digest.py on state/notices/) prints it."""
+    """A file for the coordinator; the inbox (or comms-watch/wait_digest.py) reads it from state/notices/."""
     os.makedirs(p("notices"), exist_ok=True)
     name = now.astimezone(timezone.utc).strftime("%Y%m%dT%H%M%SZ") + ".md"
     write_atomic(p("notices", name), "".join(f"scribe: {clean(x, 400)}\n" for x in lines))

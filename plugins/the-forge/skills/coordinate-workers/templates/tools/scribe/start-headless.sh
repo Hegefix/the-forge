@@ -2,10 +2,8 @@
 # Start the scribe: loop.sh in tmux session "scribe". Every interval_min a gate with no model checks the decision
 # log and state/inbox/; only when one has something new does one headless `claude -p` pass run, and it keeps the
 # notes (dashboard, the handover note's State, knowledge notes) current.
-# Notes for the scribe: save.sh "<conclusion>". Its notices for the coordinator land in state/notices/; wait on
-# them with the comms watcher's wait_digest.py (one waiter for both folders):
-#   python3 -I coordination/tools/comms-watch/wait_digest.py coordination/tools/comms-watch/state/digests \
-#     coordination/tools/scribe/state/notices
+# Notes for the scribe: save.sh "<conclusion>". Its notices for the coordinator land in state/notices/; the
+# inbox (../inbox) reads them.
 # Settings: config.json next to this file. Environment: WORKSPACE (default: the folder that holds
 # coordination/tools/scribe/).
 # Stop it with: tmux kill-session -t scribe

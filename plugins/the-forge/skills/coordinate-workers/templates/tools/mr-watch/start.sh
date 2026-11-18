@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Start mr-watch (a script, no model) in tmux session "mr-watch": watch_mrs.py polls your open MRs, and the
-# ones listed in mrs.txt, every 90 s, and appends one line per change to events.log. The coordinator keeps
-# `python3 -I <this folder>/wait_event.py` running in the background to hear about them.
+# ones listed in mrs.txt, every 90 s, and appends one line per change to events.log. The inbox
+# (../inbox) turns them into events for the coordinator; without it, run wait_event.py in the background.
 # Settings: see watch_mrs.py. Stop it with: tmux kill-session -t mr-watch
 set -euo pipefail
 D="$(cd "$(dirname "$0")" && pwd)"

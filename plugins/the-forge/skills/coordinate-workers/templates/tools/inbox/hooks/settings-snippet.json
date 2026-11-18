@@ -1,0 +1,20 @@
+{
+  "hooks": {
+    "PermissionDenied": [
+      {
+        "matcher": "*",
+        "hooks": [
+          { "type": "command", "command": "python3 -I \"/<workspace>/coordination/tools/inbox/hooks/blocked.py\"", "timeout": 10 }
+        ]
+      }
+    ],
+    "Notification": [
+      {
+        "matcher": "permission_prompt",
+        "hooks": [
+          { "type": "command", "command": "python3 -I \"/<workspace>/coordination/tools/inbox/hooks/blocked.py\"", "timeout": 10 }
+        ]
+      }
+    ]
+  }
+}

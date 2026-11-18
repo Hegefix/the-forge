@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Start the janitor (a script, no model): janitor.py --once every 10 minutes in tmux session "janitor".
-# The rules are in janitor.py's docstring. Reports go to state/report.log next to it; the coordinator
-# keeps `python3 -I <this folder>/janitor.py --wait` running in the background to hear about them.
+# The rules are in janitor.py's docstring. Reports go to state/report.log next to it; the inbox
+# (../inbox) turns them into events for the coordinator; without it, run janitor.py --wait in the background.
 # Try it first with: python3 -I janitor.py --once --dry-run
 # Stop it with: tmux kill-session -t janitor
 set -euo pipefail

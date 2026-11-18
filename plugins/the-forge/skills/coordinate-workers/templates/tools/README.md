@@ -4,6 +4,7 @@ Scripts that save the coordinator work. Three of them, the comms watcher, the bo
 
 | Helper | Files | Kind | Needs |
 |---|---|---|---|
+| [Inbox](#inbox) | `inbox/bridge.py`, `wait.py`, `timer.py`, `post.py`, `common.py`, `config.json`, `start.sh`, `hooks/`, `test_inbox.py` | script; the coordinator's one waiter | `tmux`, `python3` 3.9+; `glab` for the MR timer conditions |
 | [Comms watcher](#comms-watcher) | `comms-watch/PASS.md`, `pass.py`, `config.json`, `loop.sh`, `start-headless.sh`, `wait_digest.py` | shell loop, one headless `claude -p` pass per interval, `watcher` profile | `tmux`, `python3` 3.9+, read access to chat and the tracker; `glab` for the git hosting to-dos |
 | [Board watch](#board-watch) | `board-watch/PASS.md`, `pass.py`, `config.json`, `loop.sh`, `start-headless.sh` | shell loop, one headless `claude -p` pass at set times, `watcher` profile | `tmux`, `python3` 3.9+, read access to the tracker; `glab` for the git hosting |
 | [MR watch](#mr-watch) | `mr-watch/watch_mrs.py`, `wait_event.py`, `start.sh`, `mrs.txt` | script | `tmux`, `python3`, `glab` logged in, GitLab |
@@ -14,7 +15,35 @@ Scripts that save the coordinator work. Three of them, the comms watcher, the bo
 | [e2e runner](#e2e-runner) | `e2e/run-flows.sh` | script | Maestro |
 | [Tracker helper](#tracker-helper) | `tracker/md2adf.py` | script, run by hand | `python3`; a tracker that stores ADF (Jira, Confluence) |
 
-Pick what fits. No helper depends on another one: each works alone, and so does the coordinator without any of them. (The scribe's notices use the comms watcher's `wait_digest.py`; copy that one file if you run the scribe alone.)
+Pick what fits. No helper depends on another one: each works alone, and so does the coordinator without any of them. The inbox reads whichever helpers run, so the coordinator keeps one waiter instead of one per helper. Without the inbox, each helper's own waiter still works (`wait_digest.py`, `wait_event.py`, `janitor.py --wait`, `wait_change.sh`), but the last three miss what arrives while they are not armed.
+
+## Inbox
+
+One durable event inbox, one waiter and durable timers for the coordinator. Every 30 seconds the bridge (no model) reads the other helpers' output and appends one event per new line or file to `events.jsonl`: `seq, id, ts, source, kind, priority, text, link`, with priority high, normal or low, deduped on source and id. It only reads the helpers' files.
+
+1. `python3 -I coordination/tools/inbox/test_inbox.py` (about 15 s, in temp dirs), then `python3 -I coordination/tools/inbox/bridge.py --check`: the sources from `config.json` and whether each exists yet. A source that appears later is read from its start.
+2. `coordination/tools/inbox/start.sh` (tmux `inbox`), with the other helpers.
+3. The coordinator keeps one `python3 -I coordination/tools/inbox/wait.py` running in the background. It wakes on a high event, waits 20 s so related events come together, prints the unread high and normal events (time, source, priority, text, link) and a count of the low ones, moves its cursor and exits. Act on the batch, then start it again. `--min normal` wakes on normal events too; `--peek` prints the unread without moving the cursor; `--recent 30 --min low` prints the last 30, read or not; `--status` prints the unread counts, whether the bridge is alive, the active timers and whether a waiter is armed. Exit 2 (from `--status` too): the bridge has had no heartbeat for 3 minutes, restart it. Exit 3: a waiter is already armed. A waiter left from an earlier coordinator process moves the cursor for nobody: kill it and read `--recent 20`.
+4. Timers: `timer.py add --at 15:30 --text "…"` (`HH:MM` is the next time it comes round; or `YYYY-MM-DD HH:MM`), `--every 2h [--until 18:00]`, or `--when "<condition>" --every 5m --tries 36`. Conditions: `http_ok <url>` (any answer but 5xx and 429 counts as up), `mr_pipeline <project_id> <iid> <status>` and `mr_approved <project_id> <iid>` (both through `glab api`). A timer posts a high event unless `--priority` says otherwise; a `when` timer that runs out of tries or reaches `--until` posts "gave up". `timer.py list [--all]`, `timer.py cancel <id>`. Timers run while the bridge runs; a run missed while it was down fires once.
+5. Anything else posts with `post.py --source <name> --priority high --text "…" [--link <url>] [--id <stable id>]`; with a stable id, posting twice adds one event.
+
+| Source | Read from | Priority |
+|---|---|---|
+| `mr-watch` | `mr-watch/events.log`, each line | high: merged, closed, a failed pipeline, approvals, a conflict or a new note (`mr.wake_on`) on an MR of `mr.repos` (empty: every MR), after the notes of `mr.bots` are cut off; else low |
+| `comms-watch` | `comms-watch/state/digests/`, each file | high with a `[human]` or `[judgment]` line (`digest.wake_on_labels`) or an `URGENT` head; else normal |
+| `board-watch` | `board-watch/state/digests/` | high |
+| `scribe` | `scribe/state/notices/` | normal |
+| `janitor` | `janitor/state/report.log` | normal for `KEEP` and `NO-MR` (they wait for a decision); else low |
+| `load-check` | `load-check/events.log`, verdict changes | high when the new verdict is RED; else low |
+| `token-meter` | `token-meter/state/events.log` | high for RED; else low |
+| `timer` | `timers.json` | as added (default high) |
+| `hook` | `hooks/blocked.py` | high |
+
+`config.json` (strict JSON) lists the `sources`, each `{"name", "log" or "dir", "rule", "priority"}`: a `log` is read line by line, a `dir` file by file (names that sort by time; dot files are skipped), both from `coordination/` or from `COORD_ROOT` if you set it. Rules for a log: `mr`, `janitor`, `load`, `tokens`, and `line` (every line at `priority`, default normal). For a dir: `digest` and `file` (every file at `priority`). Restart the bridge after an edit.
+
+- **Guarantees.** The waiter saves its cursor only after printing, and only up to the last event printed, so an event posted while no waiter runs comes with the next one. The bridge saves its read positions after posting and gives every event a stable id, so a restart neither loses nor repeats one. One lock guards dedupe and append. On first start the bridge begins at the current end of each source: no history is replayed.
+- **Blocked workers.** `hooks/blocked.py` is a Claude Code hook that only observes; the permission profiles register it (their README says how). When auto mode denies a worker's tool call, or a worker has waited on a permission dialog, it posts a high event with the worker (`<repo>--<task>`), the tool and a short summary with secrets removed.
+- **Maintain.** Stop: `tmux kill-session -t inbox`, and stop the waiter; `start.sh` continues where it stopped. When `events.jsonl` passes a few MB, stop both, move the file aside, delete `state/cursor` (or the new file's low numbers count as read) and start again.
 
 ## Headless passes
 
@@ -33,7 +62,7 @@ It reads what's new in chat, the tracker, the wiki, mail and a second chat, plus
 
 1. Fill in `coordination/tools/comms-watch/config.json` (below), and delete the sources you don't use.
 2. Try it (see "Headless passes"), then `coordination/tools/comms-watch/start-headless.sh` (tmux `comms-watch`).
-3. The coordinator keeps one waiter running in the background for both helpers' files: `python3 -I coordination/tools/comms-watch/wait_digest.py coordination/tools/comms-watch/state/digests coordination/tools/scribe/state/notices` (leave out the scribe's folder if you don't run it). It returns with the new files; act on them, and start it again.
+3. The inbox turns each digest into one event, high when it holds a `human` or `judgment` item. Without the inbox, the coordinator keeps `python3 -I coordination/tools/comms-watch/wait_digest.py coordination/tools/comms-watch/state/digests coordination/tools/scribe/state/notices` running instead.
 4. Read its first digests and check them against the sources. `state/log.md` has every item, `state/runs.log` one line per pass.
 
 `config.json`:
@@ -63,7 +92,7 @@ Twice a workday (times in `config.json`) it audits the team's tickets (one label
 1. Fill in `coordination/tools/board-watch/config.json` (below).
 2. Try it: `python3 -I coordination/tools/board-watch/pass.py --self-check`, then one real pass on a copy of the state: `STATE_DIR=state-test python3 -I coordination/tools/board-watch/pass.py --once`. `state-test/runs.log` shows the cost and the time, `state-test/last-pass.jsonl` is the whole trace.
 3. `coordination/tools/board-watch/start-headless.sh` (tmux `board-watch`).
-4. Add its digest folder to the coordinator's waiter: `python3 -I coordination/tools/comms-watch/wait_digest.py coordination/tools/comms-watch/state/digests coordination/tools/scribe/state/notices coordination/tools/board-watch/state/digests`. A digest from this folder has `board-watch:` as its first line.
+4. The inbox reads its digest folder; every digest wakes the coordinator. A digest has `board-watch:` as its first line.
 
 `config.json`:
 
@@ -84,7 +113,7 @@ An item counts as new when its ticket, kind and status were not in the previous 
 Every 90 seconds, with no model, it reads your open MRs in every project (and the ones listed in `mrs.txt`) and appends one line per change to `events.log`: state, draft, merge status, a finished pipeline, approvers, a new comment by someone else, and the target branch of a merge. The comms watcher passes every few minutes; this is the fast path for your own MRs, so the coordinator merges or fixes as soon as an approval or a red pipeline lands.
 
 1. `coordination/tools/mr-watch/start.sh` (tmux `mr-watch`).
-2. The coordinator keeps `python3 -I coordination/tools/mr-watch/wait_event.py` running in the background. It returns with the new lines; start it again after each one.
+2. The inbox turns each line into an event. To wake only on some repos, or to cut a review bot's notes off, fill in `mr` in the inbox's `config.json`.
 
 Settings (environment): `MR_WATCH_AUTHOR` (default: the user `glab` is logged in as), `MR_WATCH_IGNORE` (usernames whose comments aren't news, such as you and a code-quality bot), `MR_WATCH_HOST`, `MR_WATCH_INTERVAL` (default 90 s). Add MRs of others to `mrs.txt`; it is read on every pass.
 
@@ -97,7 +126,7 @@ Every 20 minutes a gate with no model checks the decision log and `state/inbox/`
 1. Fill in `coordination/tools/scribe/config.json` (below). The template works as it is for plain-file notes in `coordination/notes/`.
 2. Try it (see "Headless passes", with `SCRIBE_DRY_RUN=1`), then `coordination/tools/scribe/start-headless.sh` (tmux `scribe`).
 3. The first pass sets its cursor to the current end of the log, so it only picks up what comes after.
-4. Its notices (a new note, a conflict it couldn't resolve, a failed push) land in `state/notices/`; the comms watcher's waiter covers that folder too.
+4. Its notices (a new note, a conflict it couldn't resolve, a failed push) land in `state/notices/`; the inbox reads them as normal events.
 
 `config.json`:
 
@@ -119,7 +148,7 @@ Every 10 minutes, with no model, it removes the worktrees under `.worktrees/` wh
 
 1. Try it: `python3 -I coordination/tools/janitor/janitor.py --self-check` (its tests, on a throwaway repo), then `python3 -I coordination/tools/janitor/janitor.py --once --dry-run`.
 2. `coordination/tools/janitor/start.sh` (tmux `janitor`).
-3. The coordinator keeps `python3 -I coordination/tools/janitor/janitor.py --wait` running in the background. It returns with the new report lines.
+3. The inbox reads `state/report.log`: the `KEEP` and `NO-MR` lines come to the coordinator with its next wake-up, for a decision.
 
 Settings (environment): `JANITOR_AUTHOR` (your GitLab username; by default the user `glab` is logged in as), `JANITOR_CLEAN_HOUR` (default 19; a clean missed because the laptop was asleep runs on the next pass), `JANITOR_BUILD_DIRS` (default `ios/build:android/app/build:android/build:android/.gradle`). It talks to GitLab only. For GitHub, `mrs_for()` would ask `gh pr list --head <branch> --state all` instead.
 
@@ -128,9 +157,9 @@ Settings (environment): `JANITOR_AUTHOR` (your GitLab username; by default the u
 `load.sh` prints a verdict first: GREEN (go), YELLOW (finish the running device job, no new agent, one platform at a time) or RED (pause the device queue, start nothing, close idle agents). Then load per core, swap, free memory, thermal warnings, booted simulators and emulators, the number of worker sessions, the three **biggest agents** by transcript size, and the top CPU processes. Swap alone only ever makes it YELLOW, because macOS keeps swap long after the pressure is gone.
 
 1. `coordination/tools/load-check/start.sh` starts load-watch (tmux `load-watch`): `load.sh` every minute into `state`, verdict changes into `events.log`.
-2. The coordinator keeps `coordination/tools/load-check/wait_change.sh` running in the background. It returns when the verdict changes.
+2. The inbox wakes the coordinator when the verdict turns RED; other changes come with the next wake-up.
 
-Set `LOAD_SKIP_SESSIONS` (a regex, default `janitor|load-watch|mr-watch|comms-watch|board-watch|scribe`) to the tmux sessions that run no long-lived Claude session, so they don't count as agents. The comms watcher, the board watch and the scribe run headless passes that keep no transcript.
+Set `LOAD_SKIP_SESSIONS` (a regex, default `janitor|load-watch|mr-watch|comms-watch|board-watch|scribe|inbox`) to the tmux sessions that run no long-lived Claude session, so they don't count as agents. The comms watcher, the board watch and the scribe run headless passes that keep no transcript.
 
 ## Token meter
 
@@ -140,7 +169,7 @@ The plan's weekly token limit is shared by every session. `meter.py` sums the us
 - `meter.py report [--days n]` is the per-day table with roles and models; `meter.py window "<from>" "<to>"` sums a stretch (for calibration); `meter.py --self-check` tests it on made-up transcripts.
 - **`budget.json` starts with placeholders, and the gate refuses to run until they are numbers** (exit code 2, first word `CONFIG`). To calibrate: note the plan's usage percentage at a time, run `meter.py window` from the plan's last reset to then, and the limit is the tokens divided by that fraction. Write how you got it into `calibration`, and set `week_resets` (`weekday` 0 = Monday, `hour`) to the plan's reset. `max_big_workers` caps the live workers on a big model.
 - **Real usage (optional).** Claude Code pipes session JSON to the `statusLine` command, and on most plans it carries `rate_limits` (`seven_day` and `five_hour` with `used_percentage` and `resets_at`, the numbers `/usage` shows). `statusline.sh` saves them to `state/rate_limits.json` and prints one short line. While that file is under 30 minutes old and its week has not reset, the gate rescales the weekly limit to the real percentage (once it is 5 % or more), using the tokens spent up to the moment it was saved, prints `week N% (real)` instead of `(est)`, and adds the 5-hour percentage. Enable it in the coordinator's own project-local settings (`.claude/settings.local.json` in the workspace folder, so workers don't run it): `{"statusLine": {"type": "command", "command": "<path to>/token-meter/statusline.sh"}}`. It needs `jq`. The field can be missing (some plans, or before the first reply): the script then prints a note, nothing is saved, and the gate falls back to the estimate and the calibrated limit.
-- `start.sh` starts token-watch (tmux `token-watch`): the gate every 10 minutes into `state/last`, verdict changes into `state/events.log`. The coordinator keeps `wait_change.sh` running in the background; it returns on each change.
+- `start.sh` starts token-watch (tmux `token-watch`): the gate every 10 minutes into `state/last`, verdict changes into `state/events.log`. The inbox wakes the coordinator when the verdict turns RED.
 - **`scripts/launch-gated.sh`** takes the arguments of `launch-worker.sh` and refuses with `STOP: …` and exit 3. The rules are in SKILL.md, "Token budget and models".
 
 The meter reads only token counts and timestamps from the transcripts; it prints no message text.

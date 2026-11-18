@@ -23,7 +23,7 @@ A workflow for running parallel Claude Code sessions. One lead session (the coor
 | [`launch-gated.sh`](skills/coordinate-workers/scripts/launch-gated.sh) | `launch-worker.sh` behind the token budget: refuses on RED, a big model on YELLOW, or too many big-model workers. |
 | [`handover.md`](skills/coordinate-workers/templates/handover.md), [`decision-log.md`](skills/coordinate-workers/templates/decision-log.md), [`worker-brief.md`](skills/coordinate-workers/templates/worker-brief.md), [`retrospective.md`](skills/coordinate-workers/templates/retrospective.md) | The coordination files, the brief every worker starts from, and the brief for a feature's retrospective. |
 | [`permission-profiles/`](skills/coordinate-workers/templates/permission-profiles/README.md) | Deny-rule settings files: `research`, `code`, `device`, `browser` for workers, `watcher` for helpers. |
-| [`tools/`](skills/coordinate-workers/templates/tools/README.md) | Helpers, each optional and independent: the comms watcher (headless passes on a schedule, digest files, a shell check that every conversation with news was read), MR watch, janitor, load check, token meter (weekly budget gate), e2e runner, tracker helper (Markdown to ADF checkboxes), and the scribe for teams that keep an LLM wiki or knowledge base (a gate with no model, a headless pass only when the decision log grew, `save.sh` for notes). Settings in each helper's `config.json`. |
+| [`tools/`](skills/coordinate-workers/templates/tools/README.md) | Helpers, each optional and independent: an event inbox (one waiter for every helper, durable timers, an observational hook for blocked workers), the comms watcher (headless passes on a schedule, digest files, a shell check that every conversation with news was read), MR watch, janitor, load check, token meter (weekly budget gate), e2e runner, tracker helper (Markdown to ADF checkboxes), and the scribe for teams that keep an LLM wiki or knowledge base (a gate with no model, a headless pass only when the decision log grew, `save.sh` for notes). Settings in each helper's `config.json`. |
 | [`examples/module-boundaries/`](skills/coordinate-workers/templates/examples/module-boundaries/README.md) | Optional example: lint rules that keep modules from importing each other's internals, and pages from importing pages. |
 
 ## Needs
@@ -52,8 +52,8 @@ Install with `claude plugin install the-forge@hegefix`. macOS with Terminal, `tm
     handover.md                  takeover steps, state, live workers, gotchas
     decision-log.md              every B, C and D decision, results, root causes
     permission-profiles/         research.json, code.json, device.json, browser.json, watcher.json
-    tools/                       the helpers you picked: comms-watch/, mr-watch/, janitor/, load-check/,
-                                 token-meter/, e2e/, tracker/, scribe/ (optional)
+    tools/                       the helpers you picked: inbox/, comms-watch/, mr-watch/, janitor/,
+                                 load-check/, token-meter/, e2e/, tracker/, scribe/ (optional)
   .worktrees/<repo>/<task>/      one per worker
   .evidence/<task>/              MR description drafts, walkthroughs, screenshots, test results, deferred.md
   .evidence/<feature>/retro.md   a feature's retrospective

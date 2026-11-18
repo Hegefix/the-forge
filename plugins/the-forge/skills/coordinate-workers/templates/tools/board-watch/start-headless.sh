@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Start board-watch: loop.sh in tmux session "board-watch". At the times in config.json it runs one headless
 # `claude -p` pass that audits the board against the merge requests, and writes a digest file to state/digests/
-# only when it has news. The coordinator's digest waiter covers that folder (see README.md).
+# only when it has news. The inbox (../inbox) reads that folder for the coordinator (see README.md).
 # Try one pass first: python3 -I pass.py --once (with STATE_DIR=state-test to keep the real state clean).
 # Stop it with: tmux kill-session -t board-watch
 set -euo pipefail

@@ -6,6 +6,7 @@ Only the coordinator reads this file. It sits next to the workspace `CLAUDE.md` 
 
 The helpers this workspace runs, copied from the kit's `templates/tools/` into `coordination/tools/`. Each one works alone; delete the lines you don't use. The skill says how to start, read and stop them.
 
+- **Inbox:** `coordination/tools/inbox/start.sh`, tmux `inbox`, a script. Keep exactly one `python3 -I coordination/tools/inbox/wait.py` armed in the background; `wait.py --status` at every status. Anything for later goes into `inbox/timer.py add`, never only into your context.
 - **Comms watcher:** `coordination/tools/comms-watch/start-headless.sh`, tmux `comms-watch`, `watcher` profile. Sources, key conversations and schedule: its `config.json`. It runs only in the working hours below.
 - **MR watch:** `coordination/tools/mr-watch/start.sh`, tmux `mr-watch`, a script.
 - **Scribe, optional,** only with a knowledge base: `coordination/tools/scribe/start-headless.sh`, tmux `scribe`, `watcher` profile.
@@ -34,7 +35,7 @@ The plan has a weekly limit. The token meter (`coordination/tools/token-meter/`)
 
 - Put the gate line in every status to the human.
 - Start workers only through `launch-gated.sh`, and obey its verdict (the rules are in the `coordinate-workers` skill, "Token budget and models"). `BUDGET_OVERRIDE=1` only on the human's word, for that one launch.
-- Keep `coordination/tools/token-meter/wait_change.sh` armed; act on each verdict change.
+- A turn to RED comes through the inbox's waiter (`coordination/tools/inbox/wait.py`); act on it at once.
 - Close an agent at its deliverable or at ~10 MB of transcript. Ask the human for a `/compact` or a handover at ~150k tokens of your own context.
 - Big jobs (overnight research, many agents, whole-repo sweeps) need the human's OK with a token estimate, run on a smaller model, and go late in the week, when the unused budget would expire anyway.
 

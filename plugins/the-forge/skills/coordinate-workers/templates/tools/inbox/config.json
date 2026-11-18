@@ -1,0 +1,13 @@
+{
+  "sources": [
+    {"name": "mr-watch", "log": "tools/mr-watch/events.log", "rule": "mr"},
+    {"name": "janitor", "log": "tools/janitor/state/report.log", "rule": "janitor"},
+    {"name": "load-check", "log": "tools/load-check/events.log", "rule": "load"},
+    {"name": "token-meter", "log": "tools/token-meter/state/events.log", "rule": "tokens"},
+    {"name": "comms-watch", "dir": "tools/comms-watch/state/digests", "rule": "digest"},
+    {"name": "board-watch", "dir": "tools/board-watch/state/digests", "rule": "file", "priority": "high"},
+    {"name": "scribe", "dir": "tools/scribe/state/notices", "rule": "file", "priority": "normal"}
+  ],
+  "mr": {"repos": [], "bots": [], "wake_on": ["-> merged", "-> closed", "-> failed", "approved: ", "conflict", "new note by "]},
+  "digest": {"wake_on_labels": ["human", "judgment"]}
+}

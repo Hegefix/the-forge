@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """mr-watch: polls your MRs and prints one line per change. A script, no model. start.sh runs it in tmux
-session "mr-watch" and appends its output to events.log; the coordinator waits on that file with
-wait_event.py.
+session "mr-watch" and appends its output to events.log; the inbox (../inbox) turns each line into an event for the
+coordinator.
 
 It watches every open MR you authored, in every project, plus the MRs listed in mrs.txt next to this file
 (one `group/project!iid` per line, `#` for comments; for MRs of others that you follow). The list is read

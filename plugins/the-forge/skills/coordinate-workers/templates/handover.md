@@ -11,11 +11,7 @@ Last updated: **<yyyy-mm-dd hh:mm>**, by coordinator `<session name>`.
    - If both are alive, pick a new name and tell every live worker: "coordinator is now `<name>`".
 2. Read, in this order: the workspace `CLAUDE.md` (settings, standing rules); this note; the dashboard, if there is one; the last ~40 lines of the decision log.
 3. Run `ListAgents` and `tmux ls`, and compare them with "Live workers" and "Helpers" below. To read a worker's screen without interrupting it: `tmux capture-pane -t <session> -p | tail -40`.
-4. On a workday, start the helpers that aren't running, and arm the background waiters of the helpers the workspace uses. Run `load.sh` once.
-   - Comms watcher and scribe, one waiter for both: `python3 -I coordination/tools/comms-watch/wait_digest.py coordination/tools/comms-watch/state/digests coordination/tools/scribe/state/notices` (leave out the scribe's folder if it doesn't run).
-   - MR watch: `python3 -I coordination/tools/mr-watch/wait_event.py`
-   - Janitor: `python3 -I coordination/tools/janitor/janitor.py --wait`
-   - Load watch: `coordination/tools/load-check/wait_change.sh`
+4. On a workday, start the helpers that aren't running, the inbox (`coordination/tools/inbox/start.sh`) with them, and arm its one waiter in the background: `python3 -I coordination/tools/inbox/wait.py`. Check with `wait.py --status` and `timer.py list`. Run `load.sh` once.
 5. Check what changed since "Last updated": the places under "Watch", and open MRs.
 6. Tell <the human> in one line: "took over, open: …".
 
@@ -49,7 +45,7 @@ Last updated: **<yyyy-mm-dd hh:mm>**, by coordinator `<session name>`.
 |---|---|---|---|---|---|---|
 | <worker-name> | <repo>--<task> | `.worktrees/<repo>/<task>` | <branch>, <MR> | research / code / device | <n> MB | idle / busy / holds <resource> |
 
-**Helpers:** <comms-watch, mr-watch, janitor, load-watch, scribe (optional): running | stopped | not used>. Waiters in the background: <`wait_digest.py` over the digests and the scribe's notices, `wait_event.py`, `janitor.py --wait`, `wait_change.sh`>. Last janitor report: <time, what it left for a decision>.
+**Helpers:** <inbox, comms-watch, mr-watch, janitor, load-watch, scribe (optional): running | stopped | not used>. The inbox waiter: <armed | not armed>; timers: <`timer.py list`, one line each>. Last janitor report: <time, what it left for a decision>.
 
 **Scarce resources:** <resource> held by <worker> since <time> | all free.
 

@@ -1,10 +1,8 @@
 #!/usr/bin/env bash
 # Start the comms watcher: loop.sh in tmux session "comms-watch", one headless `claude -p` pass per interval
 # (config.json's schedule). Each pass reads what's new in chat, the tracker, the wiki, mail and the git hosting
-# to-dos, and writes one digest file per pass with news to state/digests/. The coordinator waits for them, and for
-# the scribe's notices (leave out that folder without a scribe), with one waiter:
-#   python3 -I coordination/tools/comms-watch/wait_digest.py coordination/tools/comms-watch/state/digests \
-#     coordination/tools/scribe/state/notices
+# to-dos, and writes one digest file per pass with news to state/digests/. The inbox (../inbox) turns each digest
+# into an event for the coordinator; without it, wait_digest.py waits on the digest folders.
 # A pass runs with --permission-mode dontAsk, only the read tools listed in config.json, and the watcher
 # profile's deny rules on top.
 # Settings: config.json next to this file. Environment: WORKSPACE (default: the folder that holds
